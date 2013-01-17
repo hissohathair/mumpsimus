@@ -15,3 +15,11 @@
 *.exe
 *.out
 *.app
+
+# Editor cruft
+*~
+Makefile~
+
+noop
+
+null
