@@ -2,12 +2,14 @@
 *.o
 
 # Libraries
+*.la
 *.lib
 *.a
 
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
+*.so*
 *.so.*
 *.dylib
 
@@ -20,6 +22,29 @@
 *~
 Makefile~
 
-noop
-
-null
+# Autotools
+*.html
+/autom4te.cache
+/stamp-h1
+Makefile
+/config.status
+/config.log
+/config.h
+/aclocal.m4
+Makefile.in
+/config/
+/config.h.in
+/configure
+/build*/
+m4
+GIT_REVISION
+SVN_REVISION
+libtool
+.deps
+*.tar*
+*.zip
+*.lo
+*.gcno
+*.gcda
+app.info
+coverage_report
