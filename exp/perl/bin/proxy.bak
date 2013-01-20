@@ -1,0 +1,105 @@
+#!/usr/bin/perl -w
+#
+
+use strict;
+
+use Getopt::Long;
+use HTTP::Daemon;
+use HTTP::Status qw(:constants);
+use POSIX qw(mkfifo);
+use Alien::Charles;
+
+
+my $tempdir = "/tmp/ttt.$$";
+my $reply_file = $tempdir . "/reply";
+my $local_port = 8080;
+my $firefox_profile = '-';
+
+my $result = GetOptions( 'port=s',    \$local_port,
+			 'reply=s',   \$reply_file,
+			 'tempdir=s', \$tempdir,
+			 'profile=s', \$firefox_profile,
+    );
+
+
+my $charles = Alien::Charles->new( port => $local_port,
+    firefox_profile => $firefox_profile );
+$charles->start();
+
+my $d = HTTP::Daemon->new( 
+    LocalPort => $local_port,
+    ReuseAddr => 1,
+    )
+    || die "$0: Unable to create daemon ($!)\n";
+print STDERR "$0: Proxy started at " . $d->url . "\n";
+
+
+mkdir("/tmp/ttt.$$")
+    || die "mkdir: Unable to create temp directory ($!)\n";
+
+
+my $do_loop = 1;
+$SIG{'INT'} = sub { $do_loop = 0; };
+
+
+select(STDOUT); $| = 1;
+
+while ( $do_loop && (my $c = $d->accept) ) {
+
+    while ( $do_loop && (my $r = $c->get_request) ) {
+
+	$r->header( 'X-TTT-Reply-On' => "$reply_file" );
+	#print STDERR $0 . ": " . $r->method . " " . $r->uri . " " . $r->protocol . "\n";
+	print $r->as_string;
+
+
+	# here's another way -- named pipes
+	#
+	unless ( -p $reply_file ) {
+	    mkfifo($reply_file, 0644)
+		|| die "mkfifo: Unable to create named pipe $reply_file ($!)\n";
+	}
+	$c->send_file( $reply_file );
+
+    }
+    $c->close;
+    undef($c);
+
+}
+
+END {
+    if ( -f $charles_file ) {
+	unlink($charles_file)
+	    || warn "unlink: Unable to remove charles port ($!)\n";
+    }
+    if ( -e $reply_file ) {
+	unlink($reply_file)
+	    || warn "unlink: Unable to remove reply file ($!)\n";
+    }
+    if ( -d $tempdir ) {
+	rmdir($tempdir)
+	    || warn "rmdir: Unable to remove temp directory $tempdir ($!)\n";
+    }
+}
+
+
+
+sub get_firefox_profile
+{
+    # '/Users/dan/Library/Application Support/Firefox/Profiles/v0wnq6rx.MozillaDebug';
+    #
+    my $path = Mozilla::ProfilesIni::_find_profile_path(
+	home => $ENV{HOME},
+	type => 'firefox',
+	); 
+    my $ini = Mozilla::ProfilesIni->new( path => $path );
+
+    my $cfg = Config::IniFiles->new( -file => $ini->ini_file() );
+    my $last_profile = $cfg->val('General', 'StartWithLastProfile', 0);
+    my $profile_name = $cfg->val("Profile$last_profile", 'Name', 'default');
+    
+    my $firefox_profile = $ini->profile_path( $profile_name );
+    warn $ini->ini_file();
+    
+    return $firefox_profile;
+}

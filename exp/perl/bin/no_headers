@@ -1,0 +1,23 @@
+#!/usr/bin/perl -w
+#
+# no_headers
+#
+# $Id$
+# $Source$ $Author$ $Date$
+#
+# This script reads a HTTP request or response  on stdin and prints only the 
+# body part on stdout.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( get_script_location );
+
+
+# All the logic is in "headers", it's just reversed. Why don't we call it?
+my $headers = get_script_location('headers', $0);
+system("$headers --no-headers --body");
+
+
+

@@ -1,0 +1,221 @@
+#!/usr/bin/perl -w
+# Copyright © 2007, 2008 Jamie Zawinski <jwz@jwz.org>
+#
+# Permission to use, copy, modify, distribute, and sell this software and its
+# documentation for any purpose is hereby granted without fee, provided that
+# the above copyright notice appear in all copies and that both that
+# copyright notice and this permission notice appear in supporting
+# documentation.  No representations are made about the suitability of this
+# software for any purpose.  It is provided "as is" without express or 
+# implied warranty.
+#
+# Given a YouTube URL, downloads the corresponding MP4 file.
+# The name of the file will be the <TITLE> of the YouTube page.
+#
+# Created: 25-Apr-2007.
+
+require 5;
+use diagnostics;
+use strict;
+
+my $progname = $0; $progname =~ s@.*/@@g;
+my $version = q{ $Revision: 1.5 $ }; $version =~ s/^[^0-9]+([0-9.]+).*$/$1/;
+
+my $verbose = 1;
+
+sub de_entify($) {
+  my ($text) = @_;
+  $text =~ s/&([a-zA-Z])(uml|acute|grave|tilde|cedil|circ|slash);/$1/g;
+  $text =~ s/&lt;/</g;
+  $text =~ s/&gt;/>/g;
+  $text =~ s/&amp;/&/g;
+  return $text;
+}
+
+sub safe_system(@) {
+  my (@cmd) = @_;
+
+  print STDOUT "$progname: executing " . join(' ', @cmd) . "\n"
+    if ($verbose > 3);
+
+  system @cmd;
+  my $exit_value  = $? >> 8;
+  my $signal_num  = $? & 127;
+  my $dumped_core = $? & 128;
+  error ("$cmd[0]: core dumped!") if ($dumped_core);
+  error ("$cmd[0]: signal $signal_num!") if ($signal_num);
+# error ("$cmd[0]: exited with $exit_value!") if ($exit_value);
+}
+
+
+sub url_quote($) {
+  my ($u) = @_;
+  $u =~ s|([^-a-zA-Z0-9.\@/_\r\n])|sprintf("%%%02X", ord($1))|ge;
+  return $u;
+}
+
+sub download_youtube_url($;$) {
+  my ($url, $title) = @_;
+
+  my ($id) = ($url =~
+              m@^http://www\.youtube\.com/(?:watch\?v=|v/)([^<>?&,]+)($|&)@);
+  error ("no ID in $url" . ($title ? " ($title)" : ""))
+    unless ($id);
+  $url = "http://www.youtube.com/watch?v=$id";  # simplify
+
+  # If we already have a --title, we can check for the existence of the file
+  # before hitting the network.  Otherwise, we need to download the HTML of
+  # the Youtube URL to find out the title of the video, thus the file name.
+  #
+  my $body = undef;
+
+  if (! defined($title)) {
+    $body = `wget -qO- '$url'`;
+    ($title) = ($body =~ m@<title>\s*(.*?)\s*</title>@si);
+    $title =~ s/^Youtube - //si;
+  }
+
+  $title =~ s@: @ - @sg;    # colons, slashes not allowed.
+  $title =~ s@[:/]@ @sg;
+
+  $title = $id if (!$title || $title eq 'Broadcast Yourself.');
+
+  my $file  = de_entify ("$title.mp4");
+  my $ofile = de_entify ("$title.flv");
+
+  error ("exists: $ofile") if (-f $ofile);
+  error ("exists: $file")  if (-f $file);
+
+  if (! defined($body)) {
+    $body = `wget -qO- '$url'`;
+  }
+
+  if ($body =~ m@<div[^<>]*?class="(error|confirm)Box">\s*(.*?)\s*</div>@si) {
+    my $e = $2;
+    $e =~ s/^.* due to (a )?//s;
+    $e =~ s/^.*has been //s;
+    $e =~ s/^This is a //s;
+    $e =~ s/\. .*$//s;
+    $e =~ s/\.\s*$//s;
+    error ("$file: \"$e\"");
+  }
+
+
+  my ($args) = ($body =~ m@swfArgs = {(.*?)}@s);
+
+  if (!$args &&
+      $body =~ m@may contain content that is (inappropriate)@) {
+    error ("$file: \"$1\"");
+  }
+
+  error ("unable to find args in $url") unless ($args);
+
+  # hl:'en',video_id:'CjGi-1FHq8Y',l:'207',etc
+  # becomes:
+  # hl=en&video_id=CjGi-1FHq8Y&l=207& etc
+  #
+  # "hl": "en", "plid": "AAR..."
+  # becomes:
+  # hl=en&plid=AAR...
+  #
+  # But actually we just need the "t" parameter.
+
+  my @args = split(/, */, $args);
+  my %args;
+  foreach (@args) {
+    my ($k, $v);
+    if ( m/(^[^:]+):\s*(.*)$/s ) {
+	($k, $v) = ($1, $2);
+    }
+    else {
+	($k, $v) = ('', '');
+    }
+    next if ( $k eq '' );
+
+    $k =~ s/^[\"\']|[\"\']$//gs;
+    $v =~ s/^[\"\']|[\"\']$//gs;
+    $v = url_quote($v);
+    $v =~ s@/@%2F@gs;
+    $args{$k} = $v;
+  }
+
+  print STDERR "$progname: $file: secret is t=$args{t}\n"
+    if ($verbose > 1);
+
+  $url = ("http://www.youtube.com/get_video" .
+          "?video_id=$id" .
+          "&t=" . $args{t} .
+          "&fmt=22");
+
+  my @cmd = ("wget");
+  push @cmd, "-q" if ($verbose <= 2);
+  push @cmd, "-O";
+
+  print STDERR "$progname: downloading \"$title\"\n" if ($verbose);
+  safe_system (@cmd, $file, $url);
+
+  # Sometimes fmt=22 results in a 404.  Retry with fmt=18.
+  #
+  if (! -s $file) {
+    print STDERR "$progname: $file: retrying with 18 instead of 22\n" 
+      if ($verbose > 1);
+    unlink ($file);
+    $url =~ s/fmt=\d+\b/fmt=18/gs;
+    safe_system (@cmd, $file, $url);
+  }
+
+  # If fmt=18 results in a 404, then only the FLV version exists.
+  #
+  if (! -s $file) {
+    print STDERR "$progname: $file: retrying with FLV instead of MP4\n" 
+      if ($verbose > 1);
+    unlink ($file);
+    $url =~ s/\&fmt=\d+\b//gs;
+    $file =~ s@\.[^./]+$@.flv@s;
+    safe_system (@cmd, $file, $url);
+  }
+
+  if (! -s $file) {
+    unlink ($file);
+    error ("$file: failed: $url");
+  }
+}
+
+
+sub error($) {
+  my ($err) = @_;
+  print STDERR "$progname: $err\n";
+  exit 1;
+}
+
+sub usage() {
+  print STDERR "usage: $progname [--verbose] [--title title] youtube-urls...\n";
+  exit 1;
+}
+
+sub main() {
+  my @urls = ();
+  my $title = undef;
+  while ($#ARGV >= 0) {
+    $_ = shift @ARGV;
+    if (m/^--?verbose$/) { $verbose++; }
+    elsif (m/^-v+$/) { $verbose += length($_)-1; }
+    elsif (m/^--?title$/) { $title = shift @ARGV; }
+    elsif (m/^-./) { usage; }
+    else { 
+      error ("not a www.youtube.com url: $_")
+        unless (m@^http://www\.youtube\.com/@s);
+      my @pair = ($title, $_);
+      push @urls, \@pair;
+      $title = undef;
+    }
+  }
+  usage unless ($#urls >= 0);
+  foreach (@urls) {
+    my ($title, $url) = @$_;
+    download_youtube_url ($url, $title); 
+  }
+}
+
+main();
+exit 0;

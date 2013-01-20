@@ -1,0 +1,33 @@
+#!/usr/bin/perl -w
+#
+# spoof
+#
+# $Id: spoof 9 2009-02-17 03:40:34Z dan $
+# $Source$ $Author$ $Date$
+#
+# This script basically inserts headers into the request stream to turn spoofing on.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( get_script_location );
+
+# Convert arg list to a string
+my @spoof_list = ( );
+foreach my $a ( @ARGV ) {
+    if ( $a =~ m{^([\w\.-]+) \s* (=|->|AS) \s* ([\w\.-]+)$}sixm ) {
+	push @spoof_list, "$1 AS $3";
+    }
+    else {
+	die "spoof: Do not understand \"$a\" -- aborting\n";
+    }
+}
+my $spoofer = join('; ', @spoof_list);
+
+# Basically, just call insert_header with appropriate args
+my $headers = get_script_location('insert_headers', $0);
+system("$headers \"--X-TTT-Spoof=$spoofer\"");
+
+
+

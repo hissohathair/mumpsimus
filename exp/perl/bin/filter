@@ -1,0 +1,125 @@
+#!/usr/bin/perl -w
+#
+#
+
+use strict;
+use IPC::Open2;
+use Log::Log4perl qw(:easy);
+
+
+select(STDOUT); $| = 1;
+Log::Log4perl->easy_init($ERROR);
+
+
+die "$0: Usage: $0 mime-type command"
+    if ( $#ARGV <= 0 );
+
+my $mime_type = shift @ARGV;
+
+my $state = 'resp-header';
+my $content_length = -1;
+my $content_read = 0;
+my $buffer = '';
+my $headers = '';
+my $pid = 0;
+my $do_filter = 0;
+
+DEBUG "Beginning stream";
+while ( <STDIN> ) {
+
+    if ( $state eq 'resp-header' ) {
+	DEBUG "Read header line: $_";
+	$headers .= $_;
+	chomp;
+	if ( $_ eq '' && $do_filter ) {
+	    if ( $content_length > 0 ) {
+		$state = 'resp-body-open';
+	    } else {
+		$state = 'echo';
+		print $headers;
+		$headers = '';
+	    }
+
+	} elsif ( $_ eq '' ) {
+	    $state = 'echo';
+	    print $headers;
+	    $headers = '';
+	    $content_read = 0;
+	    $buffer = '';
+
+	} elsif ( m|Content-Length:\s+(\d+)|i ) {
+	    $content_length = $1;
+	    DEBUG "Set content length to $content_length";
+
+	} elsif ( m|Content-Type:\s+(.*)|i ) {
+	    $do_filter = 0;
+	    my $doc_type = lc($1);
+	    DEBUG "Content type is \"$doc_type\"";
+	    foreach my $dc ( split(/;\s*/, $doc_type) ) {
+		$do_filter = 1 if ( $mime_type eq $dc );
+	    }
+	    DEBUG "Do_filter is now $do_filter";
+	}
+	DEBUG "State transition resp-header -> $state"
+	    if ( $state ne 'resp-header' );
+
+    } elsif ( $state eq 'resp-body-open' ) {
+	DEBUG "Begining body processing";
+	$pid = open2(\*CHILD_IN, \*CHILD_OUT, @ARGV)
+	    || die "open: Unable to open bi-pipe to $ARGV[0] ($!)\n";
+	print CHILD_OUT $_;
+	$content_read = length($_);
+	$state = 'resp-body';
+	$buffer = '';
+	DEBUG "State transition resp-body-open -> $state"
+	    if ( $state ne 'resp-body-open' );
+
+    } elsif ( $state eq 'resp-body' ) {
+	print CHILD_OUT $_;
+	$content_read += length($_);
+	DEBUG "Read " . length($_) . " bytes (total=$content_read)";
+	if ( $content_read >= $content_length ) {
+	    close(CHILD_OUT);
+
+	    DEBUG "Reading filter response";
+	    while ( <CHILD_IN> ) {
+		$buffer .= $_;
+		DEBUG "Read " . length($_) . " bytes";
+	    }
+	    close(CHILD_IN);
+	    waitpid($pid, 0);
+
+	    my $length = length($buffer);
+	    $headers =~ s/Content-Length:\s+\d+/Content-Length: $length/si;
+	    DEBUG "Sending output to stdout";
+	    print $headers . $buffer;
+
+	    $state = 'resp-header';
+	    $buffer = '';
+	    $headers = '';
+	    $content_read = 0;
+	    $content_length = -1;
+	}
+	DEBUG "State transition resp-body -> $state"
+	    if ( $state ne 'resp-body' );
+
+    } elsif ( $state eq 'echo' ) {
+	print $_;
+	$content_read += length($_);
+	DEBUG "Echoing " . length($_) . " of $content_read bytes";
+	if ( $content_read >= $content_length ) {
+	    DEBUG "Finished reading content";
+	    $buffer = '';
+	    $headers = '';
+	    $state = 'resp-header';
+	    $content_read = 0;
+	    $content_length = -1;
+	}
+	DEBUG "State transition echo -> $state"
+	    if ( $state ne 'echo' );
+
+    } else {
+	die "$0: Unexpected state transition \"$state\"";
+    }
+
+}

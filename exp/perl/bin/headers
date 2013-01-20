@@ -1,0 +1,46 @@
+#!/usr/bin/perl -w
+#
+# header
+#
+# $Id$
+# $Source$ $Author$ $Date$
+#
+# This script reads a HTTP request on stdin and prints only the header part on stdout.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( give_me_a_message_or_give_me_death );;
+use App::TTT::Request;
+use App::TTT::Response;
+
+use Getopt::Long;
+
+
+# Command line options
+my $show_header = 1;
+my $show_body   = 0;
+my $result = GetOptions( "headers!" => \$show_header,
+			 "body!"    => \$show_body, );
+
+my $state = 'reading_header';
+my $body_bytes_read = 0;
+my $mess = undef;
+while ( !eof(*STDIN) ) {
+
+    # Get a message, but we don't need its body
+    my $line = <STDIN>;
+    chomp( $line );
+    my $mess = give_me_a_message_or_give_me_death( $line, 1 );
+
+    # Print header if asked for
+    if ( $show_header ) {
+	print $mess->headline();
+	print $mess->headers->as_string . "\n";
+    }
+
+    # Need to pass through body
+    $mess->pass_through_body( $show_body );
+}
+

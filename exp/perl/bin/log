@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+# $Id$
+#
+
+use warnings;
+use strict;
+
+use Data::Dumper;
+
+use App::TTT qw( give_me_a_message_or_give_me_death );
+use App::TTT::Request;
+use App::TTT::Response;
+
+
+while ( <STDIN> ) {
+
+    chomp;
+    next unless ( $_ );
+    my $mess = give_me_a_message_or_give_me_death( $_ );
+
+    if ( ref($mess) =~ /Request/ ) {
+	slog( $mess->request_line );
+    }
+    elsif ( $mess->content_type =~ m{^text/}i ) {
+	slog( $mess->status_line );
+	print STDERR "--- BEGIN ---\n" . $mess->content . "\n--- END ---\n\n";
+    }
+    else {
+	slog( $mess->status_line );
+    }
+
+    print (ref($mess) =~ /Request/ ? $mess->request_line : $mess->status_line);
+    print $mess->headers->as_string . "\n";
+    print $mess->content;
+
+}
+
+
+
+sub slog
+{
+    my $msg = join(' ', @_);
+    my $hour = (localtime(time))[2];
+    my $mins = (localtime(time))[1];
+    my $secs = (localtime(time))[0];
+    printf STDERR "[%2.2d:%2.2d:%2.2d] %s", $hour, $mins, $secs, $msg;
+}

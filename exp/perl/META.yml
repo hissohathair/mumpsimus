@@ -1,0 +1,33 @@
+---
+abstract: 'A container for common functions in the Teeny-Tiny-Toolkit.'
+author:
+  - 'Daniel Austin <hisso@cpan.org>'
+build_requires:
+  Test::More: 0.10
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3603'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: App-TTT
+provides:
+  App::TTT:
+    file: lib/App/TTT.pm
+    version: 1
+  App::TTT::Message:
+    file: lib/App/TTT/Message.pm
+    version: 1
+  App::TTT::Request:
+    file: lib/App/TTT/Request.pm
+    version: 1
+  App::TTT::Response:
+    file: lib/App/TTT/Response.pm
+    version: 1
+  App::TTT::UserAgent:
+    file: lib/App/TTT/UserAgent.pm
+    version: 1
+resources:
+  license: http://dev.perl.org/licenses/
+version: 1

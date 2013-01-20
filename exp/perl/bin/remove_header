@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+#
+# remove_header
+#
+# $Id: remove_header 9 2009-02-17 03:40:34Z dan $
+# $Source$ $Author$ $Date$
+#
+# Removes a header element from an input stream.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( give_me_a_message_or_give_me_death );
+use App::TTT::Request;
+use App::TTT::Response;
+
+my @remove_headers = @ARGV;
+
+while ( <STDIN> ) {
+    chomp;
+    my $mess = give_me_a_message_or_give_me_death( $_ );
+
+    foreach my $h ( @remove_headers ) {
+	if ( $h =~ m/^~(.*)/ ) {
+	    $h = $1;
+	    my @headers = $mess->header_field_names;
+	    foreach my $head ( @headers ) {
+		if ( $head =~ m{$h}sxi ) {
+		    $mess->remove_header( $head );
+		}
+	    }
+	} 
+	else {
+	    $mess->remove_header( $h );
+	}
+    }
+
+    print (ref($mess) =~ /Request/ ? $mess->request_line : $mess->status_line);
+    print $mess->headers->as_string . "\n";
+    print $mess->content;
+}
+

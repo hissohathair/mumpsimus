@@ -1,0 +1,14 @@
+#!/usr/bin/perl -w
+# $Id$
+#
+
+use warnings;
+use strict;
+
+use App::TTT;
+
+while ( <STDIN> ) {
+    print STDOUT $_;
+    print STDERR $_;
+}
+

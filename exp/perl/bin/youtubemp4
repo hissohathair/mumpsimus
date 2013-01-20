@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+#
+
+use strict;
+
+select(STDOUT); $| = 1;
+
+while ( <STDIN> ) {
+    
+    # XXX: Why not just extract anything that looks like an URL regexp and give it
+    # to jwz's script?
+
+    if ( m@^http://www\.youtube\.com/(?:watch\?v=|v/)([^<>?&,]+)($|&)@ ) {
+	my $id = $1;
+	my $url = "http://www.youtue.com/watch?v=$id";
+
+	my $title = "Youtube - $id";
+	if (! defined($title)) {
+	    my $body = `wget -qO- '$url'`;
+	    ($title) = ($body =~ m@<title>\s*(.*?)\s*</title>@si);
+	    $title =~ s/^Youtube - //si;
+	}
+
+    }
+
+}
+

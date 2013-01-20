@@ -1,0 +1,94 @@
+#!/usr/bin/perl -w
+#
+# GET
+# $Id: get 9 2009-02-17 03:40:34Z dan $ $Revision$
+# $Source$ $Author$ $Date$
+#
+
+use warnings;
+use strict;
+
+use App::TTT;
+use Carp;
+use URI;
+use HTTP::Request;
+use Net::Domain qw( hostdomain );
+
+# Perl::Critic thinks this requires interpolation. It doesn't.
+## no critic
+our ($VERSION) = ( '\$Revision: 1 \$' =~ m{ \$Revision: \s+ (\S+) }msx );
+## use critic
+
+# By default, just get a local home page
+#
+if ( scalar(@ARGV) == 0 ) {
+    push @ARGV, 'http://localhost/';
+}
+
+my $req_headers = {};
+
+while ( defined( my $url = shift @ARGV ) ) {
+
+    if ( $url =~ m{^--([^=]+)=(.*)}sxm ) {
+        my $arg = $1;
+        my $val = $2;
+        process_arg( $arg, $val, $req_headers );
+
+    }
+    elsif ( $url =~ m{^--}sxm ) {
+        warn
+"$0: Warnning -- argument \"$url\" without a value is being ignored\n";
+
+    }
+    else {
+        print_url( $url, $req_headers );
+    }
+}
+
+sub process_arg {
+    my $arg         = shift or croak 'process_arg: Expected argument';
+    my $val         = shift or undef;
+    my $req_headers = shift or croak 'proces_arg: Expected argument';
+
+    my $lc_arg = lc $arg;
+
+    if ( $lc_arg eq 'be-like' ) {
+        App::TTT::get_browser_headers( $val, $req_headers );
+
+    }
+    else {
+        $req_headers->{ 'X-TTT-' . ucfirst lc $arg } = $val;
+    }
+
+    return;
+}
+
+sub print_url {
+    my $url         = shift or croak 'print_url: Expected url';
+    my $req_headers = shift or undef;
+
+    my $uri      = URI->new($url);
+    my $protocol = 'HTTP/1.1';
+
+    unless ( $uri->scheme ) { $uri->scheme('http') }
+    unless ( $uri->host )   { $uri->host( hostdomain() ) }
+    unless ( $uri->path )   { $uri->path(q{/}) }
+
+    my $req = HTTP::Request->new( GET => $uri );
+    $req->protocol($protocol);
+    $req->header( 'Host' => $uri->host
+          . ( $uri->port == HTTP_PORT ? q{} : q{:} . $uri->port ) );
+
+    foreach my $key ( keys %{$req_headers} ) {
+        $req->header( $key => $req_headers->{$key} );
+    }
+
+    if ( $req->header('X-TTT-Method') ) {
+        $req->method( uc $req->header('X-TTT-Method') );
+    }
+
+    print $req->as_string;
+
+    return;
+}
+

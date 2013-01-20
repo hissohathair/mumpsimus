@@ -1,0 +1,35 @@
+#!/usr/bin/perl -w
+#
+# no-cache
+#
+# $Id: no_cache 9 2009-02-17 03:40:34Z dan $
+# $Source$ $Author$ $Date$
+#
+# Disable caching.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( give_me_a_message_or_give_me_death );
+use App::TTT::Request;
+use App::TTT::Response;
+
+
+while ( <STDIN> ) {
+
+    chomp;
+    my $mess = give_me_a_message_or_give_me_death( $_ );
+
+    # Set Pragma and Cache-Control header for all messages
+    $mess->header( 'Pragma'        => 'no-cache',
+		   'Cache-Control' => 'no-cache', );
+
+    # Set Expires: 0 on responses
+    if ( ref($mess) =~ /Response/xs ) {
+	$mess->header( 'Expires' => '0' );
+    }
+
+    print $mess->headline;
+    print $mess->as_string;
+}

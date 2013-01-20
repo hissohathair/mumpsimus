@@ -1,0 +1,113 @@
+#!/usr/bin/perl -w
+#
+
+use strict;
+
+use Getopt::Std;
+use HTTP::Response;
+
+
+# Default config values
+#    e    Echo. If true, will also echo all lines read to stdout
+#
+my %opts = ( 
+    'e'    => 0,
+    );
+getopts('e', \%opts);
+
+
+select(STDOUT); $| = 1;
+
+
+my $state = 'resp-line';
+my $line = 0;
+my $res = undef;
+my $content = '';
+
+while ( <STDIN> ) {
+    $line++;
+    print $_ if ( $opts{'e'} );
+
+    if ( $state eq 'resp-line' ) {
+	chomp;
+	undef($res);
+	$res = read_response_line($_);
+	$content = '';
+	$state = 'resp-headers';
+
+    } elsif ( $state eq 'resp-headers' ) {
+	chomp;
+	if ( m/^([^:]+):\s+(.*)/ ) {
+	    $res->header( $1 => $2 );
+	} elsif ( $_ eq '' ) {
+	    if ( $res->header('Content-Length') > 0 ) {
+		$state = 'resp-body';
+	    } else {
+		send_response( $res );
+		$state = 'resp-line';
+	    }
+
+	} else {
+	    warn "$0: Unable to parse header -- skipping\n";
+	}
+
+    } elsif ( $state eq 'resp-body' ) {
+	$content .= $_;
+	if ( length($content) >= $res->header('Content-Length') ) {
+	    $res->content( $content );
+	    send_response( $res );
+	    $state = 'resp-line';
+	}
+
+    } else {
+	die "$0: Unexpected state transition \"$state\"";
+    }
+}
+
+
+
+sub send_response
+{
+    my $res = shift || die "send_response: Expected response object";
+
+    if ( $res->header('x-ttt-reply-on') ) {
+	my $temp_file = $res->header('x-ttt-reply-on');
+	if ( open(FILE, ">$temp_file") ) {
+	    print FILE $res->as_string;
+	    close(FILE);
+	    
+	} else {
+	    warn "open: Unable to open $temp_file ($!)\n";
+	}
+	
+    } else {
+	die "$0: Where was this supposed to go?\n";
+    }
+}
+
+
+
+sub read_response_line
+{
+    my $line = shift @_ || die "read_response_line: Expected SOMEthing";
+
+    my $code = 0;
+    my $proto = '';
+    my $message = '';
+
+    if ( $line =~ m|^(HTTP/[\d\.]+)\s+(\d+)\s+(.*)$|i ) {
+	($proto, $code, $message) = ($1, $2, $3);
+
+    } elsif ( $line =~ m|^(\d+)\s+(.*)$| ) {
+	($code, $message) = ($1, $2);
+	$proto = 'HTTP/1.0';
+	    
+    } else {
+	die "$0: Unable to understand first line of HTTP response: $_\n";
+    }
+	
+    my $res = HTTP::Response->new( $code );
+    $res->message( $message );
+    $res->protocol( $proto );
+    return $res;
+}

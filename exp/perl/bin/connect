@@ -1,0 +1,125 @@
+#!/usr/bin/perl -w
+#
+# connect
+#
+# $Id: connect 9 2009-02-17 03:40:34Z dan $
+# $Source$ $Author$ $Date$
+#
+# Read one or more requests (and only requests), connect to a remote web server, and
+# print the response on stdout.
+#
+
+use warnings;
+use strict;
+
+use App::TTT;
+use App::TTT::Request;
+use App::TTT::Response;
+use App::TTT::UserAgent;
+
+use Carp;
+use Getopt::Long;
+use HTTP::Status qw( :constants status_message );
+
+
+my $decode = 1;
+my $follow_redirects = 0;
+my $set_content_length = 1;
+my $result = GetOptions( "decode!"             => \$decode,
+			 "follow-redirects!"   => \$follow_redirects,
+			 "set-content-length!" => \$set_content_length,
+    );
+die "$0: Error in arguments\n" unless ( $result );
+
+my $state = 'req-line';
+my $req = App::TTT::Request->new();
+my %special_headers = ( );
+
+while ( !eof(STDIN) ) {
+
+    # Read a request
+    $req->clear();
+    $req->read_from_fh( *STDIN );
+
+    # Take care of any spoofing, etc
+    fixup_request( $req );
+
+    # Preserve the "special" headers
+    %special_headers = $req->get_special_headers();
+    $req->clear_special_headers();
+
+    # Perform the request and restore special headers
+    my $res = get_request( $req );
+    $res->set_special_headers( %special_headers );
+
+    # Answer the result
+    print $res->status_line;
+    print $res->as_string;
+}
+
+
+
+sub fixup_request
+{
+    my $req = shift @_ or croak "Expected req object";
+
+
+    # Check spoof header
+    #
+    if ( $req->header('X-TTT-Spoof') ) {
+
+	# Get our target URL
+	my $url = $req->url;
+
+	# Parse out the list of hosts to switch
+	my @spoof_list = split(/\s*;\s*/, $req->header('X-TTT-Spoof'));
+	foreach my $s ( @spoof_list ) {
+	    my ($orig, $target) = split(/\s+AS\s+/, $s);
+	    if ( $url =~ s{^([\w]+)://$orig(/.*)}{$1://$target$2}xsm ) {
+		$req->url( $url );
+		$req->header( 'X-TTT-Was-Spoofed' => "$orig TO $target" );
+	    }
+	}
+    }
+
+
+    return;
+}
+
+
+sub get_request
+{
+    my $req = shift @_ or croak "Expected req object";
+
+
+    # Fetch from remote server
+    #
+    my $ua = App::TTT::UserAgent->new;
+    my $ua_res = ( $follow_redirects ? $ua->request( $req ) : $ua->simple_request( $req ) );
+
+    # Cast this to our class
+    my $headers = $ua_res->headers;
+    my $res = App::TTT::Response->new( $headers, $ua_res->content );
+    $res->code( $ua_res->code );
+    $res->message( $ua_res->message );
+    $res->protocol( $req->protocol );
+
+    if ( $decode ) {
+	$res->decode;
+	$res->header('Content-Length', length($res->content));
+    }
+
+    if ( ! $res->header( 'Content-Length' ) && $set_content_length ) {
+	$res->header('Content-Length', length($res->content));
+    } 
+
+    if ( $res->header('Content-Length') 
+	 && ($res->header('Content-Length') != length($res->content)) ) 
+    {
+	warn "$0: Content-Length header says " . $res->header('Content-Length')
+	    . " bytes but content is actually " . length($res->content) . " bytes\n";
+    }
+
+    return $res;
+}
+

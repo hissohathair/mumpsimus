@@ -1,0 +1,130 @@
+#!/usr/bin/perl -w
+#
+
+use strict;
+
+use Getopt::Long;
+use HTTP::Request;
+use HTTP::Response;
+use HTTP::Status qw( :constants status_message );
+use LWP::UserAgent;
+
+
+select(STDOUT); $| = 1;
+
+
+my $server = '';
+my $port = '';
+my $decode = 1;
+my $follow_redirects = 0;
+my $result = GetOptions( "decode!"           => \$decode,
+			 "server=s"          => \$server,
+			 "port=s"            => \$port,
+			 "follow-redirects!" => \$follow_redirects,
+    );
+die "$0: Error in arguments\n" unless ( $result );
+
+my $state = 'req-line';
+my $line = 0;
+my $req = undef;
+my $resp = undef;
+my %special_headers = ( );
+
+while ( <STDIN> ) {
+    chomp;
+    $line++;
+
+    if ( $state eq 'req-line' ) {
+	undef($req) if ( defined($req) );
+	$req = HTTP::Request->new();
+	undef($resp);
+
+	if ( m:^(GET|HEAD)\s+([^\s]+)\s+(HTTP/([\d\.]+))$: ) {
+	    $req->method( $1 );
+	    $req->uri( $2 );
+	    $req->protocol( $3 );
+	    %special_headers = ( );
+	    $state = 'req-headers';
+	    
+	} else {
+	    $resp = HTTP::Request->new( HTTP_NOT_IMPLEMENTED,
+					status_message( HTTP_NOT_IMPLEMENTED ) );
+	    $resp->header( 'Content-Type', 'text/html' );
+	    my $content = '<html><head><title>Method Implemented</title><body>'
+		. '<h1>Method Not Implemented</h1></body></html>' . "\n";
+	    $resp->header( 'Content-Length', length($content));
+	    $resp->content( $content );
+
+	    warn "$0: Did not understand GET request\n";
+	    $state = 'req-headers';
+	}
+
+    } elsif ( $state eq 'req-headers' ) {
+
+	if ( $_ eq '' ) {
+	    do_request( $req, $resp );
+	    $state = 'req-line';
+
+	} elsif ( /^([^:]+):\s+(.*)/ ) {
+	    my ($key, $value) = ($1, $2);
+	    if ( $key =~ m|^X-TTT-([^:]+)|i ) {
+		$special_headers{$key} = $value;
+	    } else {
+		$req->header( $key => $value );
+	    }
+
+	} else {
+	    warn "$0: Did not understand HTTP header line $line\n";
+	}
+
+    } else {
+	die "$0: Unknown state transition";
+    }
+}
+
+
+
+sub do_request
+{
+    my $req = shift || die "do_request: Expected req object";
+    my $resp = shift;
+
+
+    # Do we already have a response object?
+    #
+    if ( defined($resp) && ref($resp) ) {
+	foreach my $k ( sort keys %special_headers ) {
+	    $resp->header( $k => $special_headers{$k} );
+	}
+	$resp->protocol( $req->protocol ) unless ( $resp->protocol );
+	print $resp->as_string;
+	return;
+    }
+
+    my $ua = LWP::UserAgent->new;
+    my $res = undef;
+    if ( $follow_redirects ) {
+	$res = $ua->request( $req );
+    } else {
+	$res = $ua->simple_request( $req );
+    }
+
+    foreach my $k ( sort keys %special_headers ) {
+	$res->header( $k => $special_headers{$k} );
+    }
+
+    if ( $decode ) {
+	$res->decode;
+	$res->header('Content-Length', length($res->content));
+    }
+
+    if ( ! $res->header( 'Content-Length' ) ) {
+	$res->header('Content-Length', length($res->content));
+    } elsif ( $res->header('Content-Length') != length($res->content) ) {
+	warn "$0: Content-Length header says " . $res->header('Content-Length')
+	    . " bytes but content is actually " . length($res->content) . " bytes\n";
+    }
+
+    print $res->as_string;
+}
+

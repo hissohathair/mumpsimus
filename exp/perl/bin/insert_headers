@@ -1,0 +1,37 @@
+#!/usr/bin/perl -w
+#
+# insert_header
+#
+# $Id: insert_headers 9 2009-02-17 03:40:34Z dan $
+# $Source$ $Author$ $Date$
+#
+# Insert a header element into an input stream.
+#
+
+use warnings;
+use strict;
+
+use App::TTT qw( give_me_a_message_or_give_me_death );
+use App::TTT::Request;
+use App::TTT::Response;
+
+my @insert_headers = @ARGV;
+
+while ( <STDIN> ) {
+    chomp;
+    my $mess = give_me_a_message_or_give_me_death( $_ );
+
+    foreach my $h ( @insert_headers ) {
+	if ( $h =~ m/^(--)?([^=]+) = (.*)/sx ) {
+	    $mess->header( $2 => $3 );
+	}
+	else {
+	    warn "insert_header: No value for header \"$h\"\n";
+	}
+    }
+
+    print (ref($mess) =~ /Request/ ? $mess->request_line : $mess->status_line);
+    print $mess->headers->as_string . "\n";
+    print $mess->content;
+}
+
