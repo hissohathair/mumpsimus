@@ -1,0 +1,6 @@
+1..5
+ok 1 - We appear to have some test data :)
+ok 2 - noop does not modify output
+ok 3 - null consumes all output
+ok 4 - log does not modify output
+ok 5 - upcase converts to upper case

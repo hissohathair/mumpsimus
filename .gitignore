@@ -21,6 +21,7 @@
 # Editor cruft
 *~
 Makefile~
+.*.swp
 
 # Autotools
 *.html
@@ -35,8 +36,8 @@ Makefile.in
 /config/
 /config.h.in
 /configure
-/build*/
-m4
+#/build*/
+#m4
 GIT_REVISION
 SVN_REVISION
 libtool
@@ -48,3 +49,8 @@ libtool
 *.gcda
 app.info
 coverage_report
+
+# Perl build
+_build
+Build
+blib
