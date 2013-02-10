@@ -49,6 +49,8 @@ libtool
 *.gcda
 app.info
 coverage_report
+*.log
+*.trs
 
 # Perl build
 _build

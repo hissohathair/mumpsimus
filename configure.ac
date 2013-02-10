@@ -7,7 +7,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AC_CONFIG_SRCDIR([src/noop.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile t/Makefile])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
 # Checks for programs.
@@ -21,6 +21,8 @@ AC_PATH_PROGS([PROVE], [prove perl])
 
 # Checks for libraries.
 AC_CHECK_LIB(curl, curl_version) 
+AC_CHECK_LIB(event, event_get_method)
+AC_CHECK_LIB(event2, event2_get_method)
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h sysexits.h])
