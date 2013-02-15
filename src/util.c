@@ -28,7 +28,7 @@ ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write)
 
 void *memset_simple(void *b, int c, size_t len)
 {
-  int *buf = (char*)b;
+  int *buf = (int*)b;
   for ( int i = 0; i < len; i++ ) {
     buf[i] = c;
   }
