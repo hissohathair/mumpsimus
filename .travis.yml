@@ -1,11 +1,9 @@
 language: c
 
 before_script:
+  - sudo apt-get install -qq automake
   - ./build-aux/check-versions
 
 compiler:
   - gcc
   - clang
-
-env:
-  - ACLOCAL="./build-aux/missing aclocal" AUTOMAKE="./build-aux/missing automake"
