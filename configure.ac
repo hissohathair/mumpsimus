@@ -21,11 +21,11 @@ AC_PATH_PROGS([PROVE], [prove perl])
 
 # Checks for libraries.
 #AC_CHECK_LIB(curl, curl_version) 
-AC_CHECK_LIB( [event], [event_enable_debug_mode] )
+#AC_CHECK_LIB( [event], [event_enable_debug_mode] )
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h sysexits.h])
-AC_CHECK_HEADERS([event2/event.h])
+#AC_CHECK_HEADERS([event2/event.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SSIZE_T
