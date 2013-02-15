@@ -1,6 +1,6 @@
 language: c
 
-before-script:
+before_script:
   - ./build-aux/check-versions
 
 compiler:
