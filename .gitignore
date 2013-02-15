@@ -17,6 +17,10 @@
 *.exe
 *.out
 *.app
+/src/log
+/src/noop
+/src/null
+/src/upcase
 
 # Editor cruft
 *~
@@ -27,8 +31,7 @@ Makefile~
 # Autotools
 *.html
 /autom4te.cache
-/stamp-h1
-Makefile
+/src/stamp-h1
 /config.status
 /config.log
 /config.h

@@ -11,11 +11,12 @@
  *     - using sysexits.h for exit status codes
  *     - using paths.h for system files
  *     - gnu coding syntax style
+ *
+ * Revision history jokes hardly seem worth the effort.
  */
 
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sysexits.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -24,96 +25,85 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <paths.h>
+#include <event.h>
 
-#define LOG(x) fprintf(stderr, "%s(%d): %s\n", __FILE__, __LINE__, x)
-#ifndef SSIZE_MAX
-# define SSIZE_MAX 2048
-#endif
+#include "mumpsimus.h"
 
-/* open_pipe: Will open a new pipe channel, fork, and then exec the
- *   command "cmd", using the standard shell to handle things like
- *   paths.
- * 
- */
-int open_pipe(int p[2], char *cmd)
+
+struct event_base *init_event_base()
 {
-  int pid = 0;
+  struct event_base *base = NULL;
+  const char **methods = NULL;
+
+  base = event_base_new();
+  event_base_priority_init(base, 1);
+
+  methods = event_get_supported_methods();
+  fprintf(stderr, "Running libevent version %s. Available methods: ", event_get_version());
+  for (int i = 0; methods[i] != NULL; ++i) {
+    fprintf(stderr, "%s ", methods[i]);
+  }
+  fprintf(stderr, " (using: %s)\n", event_base_get_method(base));
+
+  return base;
+}
+
+
+void cb_stdin_ready(evutil_socket_t fd, short what, void *arg)
+{
+  struct fd_pipe_set *fds = arg;
+
+  char buf[SSIZE_MAX];
+  memset(buf, 0, SSIZE_MAX);
+
+  printf("Got an event on socket %d:%s%s%s%s [flags = %d]\n",
+	 (int) fd,
+	 (what&EV_TIMEOUT) ? " timeout" : "",
+	 (what&EV_READ)    ? " read" : "",
+	 (what&EV_WRITE)   ? " write" : "",
+	 (what&EV_SIGNAL)  ? " signal" : "",
+	 fds->fd0);
+
+  int nr = read(fd, &buf, SSIZE_MAX);
+  if ( nr > 0 ) {
+    int nw = 0;
+    do {
+      nw += write(fds->fd1, &buf, nr);
+    } while ( nw < nr );
+
+  }
+}
+
+
+int init_events(struct event_base *base)
+{
+  struct event       *ev1 = NULL, *ev2 = NULL;
+  struct fd_pipe_set *fds = NULL;
+
+  fds = (struct fd_pipe_set*)malloc(sizeof(struct fd_pipe_set));
+  if ( NULL == fds ) {
+    perror("Out of memory");
+    abort();
+  }
+  fds->fd0 = 0;
+  fds->fd1 = 1;
+  fds->fd2 = 2;
   
-  if( pipe(p) == -1 ) {
-    perror("pipe() failed");
-    return -1;
-  }
-  
-  pid = fork();
-  if ( -1 == pid ) {
-    perror("fork() failed");
-    return -1;
-  }
+  ev1 = event_new(base, fds->fd0, EV_READ, cb_stdin_ready, fds );
+  event_add(ev1, NULL);
 
-  /* The child does the exec (pid==0). Parent returns */
-  if ( 0 == pid ) {
-
-    /* Close the child's read end of the pipe, and tie write end to stdout. */
-    close(p[0]);
-    dup2(p[1], 1);
-    close(p[1]);
-
-    /* Don't cache / buffer things at our end */
-    fcntl(p[0], F_NOCACHE, 1);
-    fcntl(p[1], F_NOCACHE, 1);
-
-    /* Execute ps. */
-    execl(_PATH_BSHELL, _PATH_BSHELL, "-c", cmd, NULL);
-    perror("execl() failed");
-    return -1;
-  }
-
-  return pid;
+  return 0;
 }
 
 
 int main(int argc, char **argv)
 {
-  int pid_suck, p_suck[2];
-  int pid_blow, p_blow[2];
-  
-  char buf[SSIZE_MAX];
+  struct event_base *base =  NULL;
 
-  pid_blow = open_pipe(p_blow, "echo fred loves wilma loves barney loves betty loves fred");
-  pid_suck = open_pipe(p_suck, "sed -El -e 's/ ([a-z]+) ([a-z]+) / \\2 \\1 /g'");
-  LOG("open_pipe()s have returned");
-  if ( pid_blow <= 0 || pid_suck <= 0 ) {
-    fprintf(stderr, "%s: error -- unable to open pipes\n", argv[0]);
-    exit(EX_UNAVAILABLE);
-  }
-    
-  int child_status = 0;
-  int num_childs = 2;
+  base = init_event_base();
+  init_events(base);
+  event_base_dispatch(base);
+  event_base_free(base);
 
-  while ( num_childs > 0 ) {
-    int wait_status = waitpid(-1, &child_status, 0);
-    num_childs--;
-
-    if ( wait_status < 0 ) {
-      perror("waitpid() failed");
-    }
-    else {
-      fprintf(stderr, "%s: waitpid returned %d. ", argv[0], wait_status); 
-      if ( WIFEXITED(child_status) )
- 	fprintf(stderr, "Child terminated normally (status %d)\n", WEXITSTATUS(child_status));
-      if ( WIFSIGNALED(child_status) ) 
-	fprintf(stderr, "Child was signalled (signal %d)\n", WTERMSIG(child_status));
-    }
-  }
-
-  int r = 0;
-  fcntl(p_suck[0], F_SETFL, O_NONBLOCK); 
-  while ( (r = read(p_suck[0], buf, SSIZE_MAX-1)) && (r > 0)) { 
-    buf[r] = '\0'; 
-    printf("SED [\n%s\n]\n", buf); 
-  } 
-  
-  LOG("Aaaaaaaaaaand.... SCENE!"); 
-  return(EX_OK); 
+  return EX_OK;
 }
