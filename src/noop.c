@@ -5,6 +5,10 @@
 #include <unistd.h>
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #ifndef SSIZE_MAX
 #define SSIZE_MAX 2048
 #endif
@@ -29,10 +33,16 @@ int main(int argc, char *argv[])
   while ( br != 0 ) {
     memset(buf, 0, SSIZE_MAX);
     br = read(0, buf, SSIZE_MAX);
-    if ( do_writes && br > 1 )
-      write(1, buf, br);
-    else if ( br < 0 )
+    if ( do_writes && br > 1 ) {
+      int bw = 0;
+      do {
+	bw  += write(1, buf, br);
+	buf += bw;
+      } while ( bw < br );
+    }
+    else if ( br < 0 ) {
       rc = 1;
+    }
   }
 
   free(buf);
