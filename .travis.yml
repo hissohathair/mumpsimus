@@ -4,3 +4,4 @@ compiler:
   - gcc
   - clang
 
+before-script:	./build-aux/check-versions
