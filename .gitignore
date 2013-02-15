@@ -39,7 +39,6 @@ Makefile~
 Makefile.in
 /config/
 /config.h.in
-/configure
 #/build*/
 GIT_REVISION
 SVN_REVISION
