@@ -3,8 +3,7 @@
 # prepare-travis-ci: Make a fresh repo buildable in CI
 #
 
-echo "TRAVIS=$TRAVIS"
-if [ -n "$TRAVIS" ] ; then
+if [ "x$TRAVIS" = "xtrue" ] ; then
     echo "Checking versions..."
     autoconf --version | head -1
     automake --version | head -1
