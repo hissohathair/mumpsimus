@@ -25,7 +25,7 @@ AC_CHECK_LIB( [event], [event_enable_debug_mode] )
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h sysexits.h])
-AC_CHECK_HEADERS([event2/event.h], [], [AC_MSG_ERROR([Cannot find event2/event.h])])
+AC_CHECK_HEADERS([event2/event.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SSIZE_T

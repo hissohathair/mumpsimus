@@ -4265,8 +4265,6 @@ if test "x$ac_cv_header_event2_event_h" = xyes; then :
 #define HAVE_EVENT2_EVENT_H 1
 _ACEOF
 
-else
-  as_fn_error $? "Cannot find event2/event.h" "$LINENO" 5
 fi
 
 done
