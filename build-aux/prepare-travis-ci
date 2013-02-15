@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# prepare-travis-ci: Make a fresh repo buildable in CI
+#
+
+autoreconf -vi

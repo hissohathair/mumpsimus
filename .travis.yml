@@ -1,8 +1,7 @@
 language: c
 
 before_script:
-  - sudo apt-get install -qq automake
-  - ./build-aux/check-versions
+  - ./build-aux/prepare-travis-ci
 
 compiler:
   - gcc
