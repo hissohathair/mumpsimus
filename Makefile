@@ -365,12 +365,12 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
-ACLOCAL = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing aclocal-1.13
+ACLOCAL = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing aclocal-1.11.3
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AUTOCONF = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing autoconf
 AUTOHEADER = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing autoheader
-AUTOMAKE = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing automake-1.13
+AUTOMAKE = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing automake-1.11.3
 AWK = awk
 CC = gcc
 CCDEPMODE = depmode=gcc3
