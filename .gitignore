@@ -30,6 +30,9 @@ Makefile~
 .#*
 
 # Autotools
+Makefile
+Makefile.in
+/configure
 *.html
 /autom4te.cache
 /src/stamp-h1
@@ -38,7 +41,8 @@ Makefile~
 /config.h
 /aclocal.m4
 /config/
-/config.h.in
+/src/config.h.in
+/src/config.h
 #/build*/
 GIT_REVISION
 SVN_REVISION
