@@ -1,49 +1,39 @@
-/* noop.c -- no-operation performed. */
+/*
+ * noop.c -- No operation performed.
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
-#ifndef SSIZE_MAX
-#define SSIZE_MAX 2048
-#endif
-
+#include "util.h"
 
 int main(int argc, char *argv[])
 {
   ssize_t br = 1;
   char    *buf = NULL;
   int     do_writes = 1;
-  int     rc = 0;
+  ssize_t rc = EX_OK;
 
   buf = (char*)malloc(sizeof(char) * SSIZE_MAX);
   if ( buf == NULL ) {
-    fprintf(stderr, "%s: Out of memory\n", argv[0]);
-    return 255;
+    perror("Error from malloc");
+    return EX_OSERR;
   }
 
   if ( strcmp(argv[0] + strlen(argv[0]) - 4, "null") == 0 )
     do_writes = 0;
 
-  while ( br != 0 ) {
+  do {
     memset(buf, 0, SSIZE_MAX);
-    br = read(0, buf, SSIZE_MAX);
-    if ( do_writes && br > 1 ) {
-      int bw = 0;
-      do {
-	bw  += write(1, buf, br);
-	buf += bw;
-      } while ( bw < br );
-    }
-    else if ( br < 0 ) {
-      rc = 1;
-    }
-  }
+    br = read(STDIN_FILENO, buf, SSIZE_MAX);
+    if ( do_writes && br > 1 )
+      write_all(STDOUT_FILENO, buf, br);
+    else if ( br < 0 )
+      rc = EX_IOERR;
+  } while ( br > 0 );
 
   free(buf);
 
