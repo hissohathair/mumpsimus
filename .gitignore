@@ -21,6 +21,7 @@
 /src/noop
 /src/null
 /src/upcase
+/src/pipetest
 
 # Editor cruft
 *~

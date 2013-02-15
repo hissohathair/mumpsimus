@@ -7,3 +7,5 @@ compiler:
   - gcc
   - clang
 
+env:
+  - ACLOCAL="./build-aux/missing aclocal" AUTOMAKE="./build-aux/missing automake"

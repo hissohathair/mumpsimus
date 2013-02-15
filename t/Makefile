@@ -78,12 +78,12 @@ am__can_run_installinfo = \
   esac
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing aclocal-1.11.3
+ACLOCAL = ./build-aux/missing aclocal
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AUTOCONF = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing autoconf
 AUTOHEADER = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing autoheader
-AUTOMAKE = ${SHELL} /Users/dan/Development/Projects/mumpsimus/build-aux/missing automake-1.11.3
+AUTOMAKE = ./build-aux/missing automake
 AWK = awk
 CC = gcc
 CCDEPMODE = depmode=gcc3
