@@ -3,4 +3,16 @@
 # prepare-travis-ci: Make a fresh repo buildable in CI
 #
 
-autoreconf -vi
+echo "TRAVIS=$TRAVIS"
+if [ -n "$TRAVIS" ] ; then
+    echo "Checking versions..."
+    autoconf --version | head -1
+    automake --version | head -1
+
+    echo "Running autoreconf to generate required build files"
+    autoreconf -fi
+
+else
+    echo "Not running under CI. Will not force autoreconf."
+    autoreconf -vim
+fi
