@@ -230,6 +230,7 @@ struct http_parser_settings {
   http_cb      on_message_complete;
 };
 
+void init_http_parser_settings(struct http_parser_settings *);
 
 enum http_parser_url_fields
   { UF_SCHEMA           = 0

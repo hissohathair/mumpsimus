@@ -3,10 +3,10 @@
 use warnings;
 use strict;
 
-use Test::More tests => 5;
+use Test::More tests => 4;
 
 BEGIN {
-    $ENV{PATH} = './src:' . $ENV{PATH};
+    $ENV{PATH} = './src:.:' . $ENV{PATH};
 }
 
 
@@ -20,11 +20,7 @@ is( $actual, $expected,   'noop does not modify output' );
 $actual = `cat Makefile | null`;
 is( $actual, '', 'null consumes all output' );
 
-# 4: log passes through content unchanged
-$actual = `cat Makefile | log`;
-is( $actual, $expected, 'log does not modify output' );
-
-# 5: upcase converts all letters to upper case (assumes Perl behaviour is same)
+# 4: upcase converts all letters to upper case (assumes Perl behaviour is same)
 $expected = uc $expected;
 $actual = `cat Makefile | upcase`;
 is( $actual, $expected, 'upcase converts to upper case' );

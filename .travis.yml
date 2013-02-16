@@ -6,3 +6,6 @@ before_script:
 compiler:
   - gcc
   - clang
+
+notifications:
+  email: false

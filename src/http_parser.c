@@ -23,11 +23,11 @@
  */
 #include "http_parser.h"
 #include <assert.h>
-#include <stddef.h>
 #include <ctype.h>
+#include <limits.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
 #ifndef ULLONG_MAX
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
@@ -253,7 +253,7 @@ enum state
 
   , s_start_req
 
-  , s_req_method
+    , s_req_method /* 18 */
   , s_req_spaces_before_url
   , s_req_schema
   , s_req_schema_slash
@@ -409,6 +409,24 @@ static struct {
 #undef HTTP_STRERROR_GEN
 
 int http_message_needs_eof(const http_parser *parser);
+
+
+/* init_http_parser_settings:
+ *
+ * Set all callback values to NULL.
+ */
+void init_http_parser_settings(struct http_parser_settings *hps) {
+  hps->on_message_begin = NULL;
+  hps->on_url = NULL;
+  hps->on_status_complete = NULL;
+  hps->on_header_field = NULL;
+  hps->on_header_value = NULL;
+  hps->on_headers_complete = NULL;
+  hps->on_body = NULL;
+  hps->on_message_complete = NULL;
+}
+
+
 
 /* Our URL parser.
  *
@@ -1813,6 +1831,7 @@ size_t http_parser_execute (http_parser *parser,
         goto error;
     }
   }
+
 
   /* Run callbacks for any marks that we have leftover after we ran our of
    * bytes. There should be at most one of these set, so it's OK to invoke
