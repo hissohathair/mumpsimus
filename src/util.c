@@ -1,6 +1,11 @@
-/* util.c */
+/* 
+ * util.c -- utility functions used in common across commands.
+ *
+ */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "util.h"
