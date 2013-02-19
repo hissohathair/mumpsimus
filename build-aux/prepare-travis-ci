@@ -4,6 +4,9 @@
 #
 
 if [ "x$TRAVIS" = "xtrue" ] ; then
+    echo "Installing test dependencies..."
+    cpanm -nq Test::Command
+
     echo "Checking versions..."
     autoconf --version | head -1
     automake --version | head -1
