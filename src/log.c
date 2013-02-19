@@ -23,7 +23,7 @@
  * until I eventually die of shame.
  */
 static char *__url = NULL;
-static __http_message_complete = 0;
+static int __http_message_complete = 0;
 int cb_log_message_complete(http_parser *parser) {
 
   if ( 0 == parser->type ) {
@@ -93,7 +93,7 @@ int pass_http_messages(int fd_in, int fd_out)
 
     /* br==0 means eof which has to be processed by the parser just like data read */
     if ( 0 == bytes_read ) {
-      size_t last_parsed = http_parser_execute(parser, &settings, buffer, 0);
+      ssize_t last_parsed = http_parser_execute(parser, &settings, buffer, 0);
       if ( last_parsed < 0 ) {
 	perror("Error reading HTTP message stream");
 	errors++;
@@ -111,8 +111,8 @@ int pass_http_messages(int fd_in, int fd_out)
        * messages in this stream of bytes. So we repeatedly call parse_http_message until
        * the bytes processed equals the bytes just read into the buffer.
        */
-      size_t total_parsed = 0;
-      size_t last_parsed  = 0;
+      ssize_t total_parsed = 0;
+      ssize_t last_parsed  = 0;
       int max_loops = 5;
       do {
 	/*	fprintf(stderr, "%s(%d): About to parse from offset %d, where char=%c (%d)\n", __FILE__, __LINE__,
