@@ -3,6 +3,8 @@
 use warnings;
 use strict;
 
+use lib './t/lib';
+
 use Test::Command tests => 7;
 
 BEGIN {
