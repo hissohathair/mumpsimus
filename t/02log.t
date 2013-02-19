@@ -5,7 +5,7 @@ use strict;
 
 use lib './t/lib';
 
-use Test::Command tests => 9;
+use Test::Command tests => 13;
 use Test::More;
 
 BEGIN {
@@ -33,11 +33,13 @@ $cmd->exit_is_num(0, 'log exited with zero for concatenated http messages');
 my @stderr_lines = split /\n/, $cmd->stderr_value;
 is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message generated');
 
-# 10-12: double the test data
-#push @TEST_FILES, @TEST_FILES;
-#$expected = `cat @TEST_FILES`;
-#$cmd = Test::Command->new( cmd => "cat @TEST_FILES | log" );
-#$cmd->stdout_is_eq($expected, 'log does not molest concatenated http messages (repeated)');
-#$cmd->exit_is_num(0, 'log exited with zero for (req + res) x 2');
-#@stderr_lines = $cmd->stderr_value;
-#is( $#TEST_FILES, $#stderr_lines, '1 log message for each http message generated');
+# 10-13: double the test data
+my $orig_files = $#TEST_FILES+1;
+push @TEST_FILES, @TEST_FILES;
+is( $#TEST_FILES+1, $orig_files * 2, 'we doubled our test files' );
+$expected = `cat @TEST_FILES`;
+$cmd = Test::Command->new( cmd => "cat @TEST_FILES | log" );
+$cmd->stdout_is_eq($expected, 'log does not molest concatenated http messages (doubled)');
+$cmd->exit_is_num(0, 'log exited with zero for concatenated http messages (doubled)');
+@stderr_lines = split /\n/, $cmd->stderr_value;
+is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message generated (doubled)');
