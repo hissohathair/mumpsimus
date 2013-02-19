@@ -5,6 +5,7 @@
 
 if [ "x$TRAVIS" = "xtrue" ] ; then
     echo "Installing test dependencies..."
+    perlbrew use 5.12
     cpanm -nq Test::Command
 
     echo "Checking versions..."
