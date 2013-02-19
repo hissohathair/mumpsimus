@@ -30,7 +30,7 @@ $cmd->stdout_is_eq($expected, 'log does not molest concatentated http messages')
 $cmd->exit_is_num(0, 'log exited with zero for concatenated http messages');
 
 # 9: num log messages == num http messages
-my @stderr_lines = $cmd->stderr_value;
+my @stderr_lines = split /\n/, $cmd->stderr_value;
 is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message generated');
 
 # 10-12: double the test data
