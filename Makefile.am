@@ -1,7 +1,7 @@
 SUBDIRS = src t
 
 # for "make check"
-TESTS = t/01noop.t
+TESTS = t/01noop.t t/02log.t
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 		  $(top_srcdir)/build-aux/tap-driver.sh
 

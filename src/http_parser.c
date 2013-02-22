@@ -20,11 +20,14 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
+ *
+ * DKA: Marking changes.
  */
 #include "http_parser.h"
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1613,12 +1616,12 @@ size_t http_parser_execute (http_parser *parser,
       {
         STRICT_CHECK(ch != LF);
 
-        parser->nread = 0;
 
         /* Exit, the rest of the connect is in a different protocol. */
         if (parser->upgrade) {
           parser->state = NEW_MESSAGE();
           CALLBACK_NOTIFY(message_complete);
+	  parser->nread = 0;
           return (p - data) + 1;
         }
 
@@ -1648,7 +1651,7 @@ size_t http_parser_execute (http_parser *parser,
             }
           }
         }
-
+	
         break;
       }
 
@@ -1659,6 +1662,11 @@ size_t http_parser_execute (http_parser *parser,
 
         assert(parser->content_length != 0
             && parser->content_length != ULLONG_MAX);
+
+	/* DKA: This is a change in original behaviour, to make nread report total bytes for
+	 * a message.
+	 */
+	parser->nread += to_read;
 
         /* The difference between advancing content_length and p is because
          * the latter will automaticaly advance on the next loop iteration.
@@ -1916,6 +1924,7 @@ http_parser_init (http_parser *parser, enum http_parser_type t)
   parser->type = t;
   parser->state = (t == HTTP_REQUEST ? s_start_req : (t == HTTP_RESPONSE ? s_start_res : s_start_req_or_res));
   parser->http_errno = HPE_OK;
+  parser->nread = 0;
 }
 
 const char *
