@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "ulog.h"
 #include "util.h"
 #include "http_parser.h"
 
@@ -24,24 +25,38 @@
  */
 static char *__url = NULL;
 static int __http_message_complete = 0;
+
 int cb_log_message_complete(http_parser *parser) {
 
+  char *str = malloc(sizeof(char) * SSIZE_MAX);
+  if ( NULL == str ) {
+    perror("Unable to malloc for logging");
+    return 0;
+  }
+
+  /* builds the correct log message */
   if ( 0 == parser->type ) {
-    fprintf(stderr, "%s: [req] %s %s HTTP/%d.%d (%d bytes)\n", __FILE__,
-	    http_method_str(parser->method), 
-	    (__url == NULL ? "unknown" : __url), 
-	    parser->http_major, 
-	    parser->http_minor, 
-	    parser->nread);
+    snprintf(str, SSIZE_MAX, "[req] %s %s HTTP/%d.%d (%d bytes)",
+	     http_method_str(parser->method), 
+	     (__url == NULL ? "unknown" : __url), 
+	     parser->http_major, 
+	     parser->http_minor, 
+	     parser->nread);
   }
   else {
-    fprintf(stderr, "%s: [res] HTTP/%d.%d %d (%d bytes)\n", __FILE__, 
-	    parser->http_major, 
-	    parser->http_minor, 
-	    parser->status_code,
- 	    parser->nread);
+    snprintf(str, SSIZE_MAX, "[res] HTTP/%d.%d %d (%d bytes)",
+	     parser->http_major, 
+	     parser->http_minor, 
+	     parser->status_code,
+	     parser->nread);
   }	    
   __http_message_complete = 1;
+
+  fprintf(stderr, "%s: %s\n", __FILE__, str);
+  ulog(LOG_INFO, "%s", str);
+
+  free(str);
+
   return 0;
 }
 
@@ -89,7 +104,7 @@ int pass_http_messages(int fd_in, int fd_out)
     /* Reading from source until eof */
     memset(buffer, 0, SSIZE_MAX);
     bytes_read = read(fd_in, buffer, SSIZE_MAX);
-    //fprintf(stderr, "%s(%d): Read %d bytes from %d\n", __FILE__, __LINE__, bytes_read, fd_in);
+    ulog(LOG_DEBUG, "Read %zd bytes from fd=%d", bytes_read, fd_in);
 
     /* br==0 means eof which has to be processed by the parser just like data read */
     if ( 0 == bytes_read ) {
@@ -104,7 +119,7 @@ int pass_http_messages(int fd_in, int fd_out)
 
       /* No matter what we always echo what we've read */
       write_all(fd_out, buffer, bytes_read);
-      //fprintf(stderr, "%s(%d): Wrote %d bytes to %d\n", __FILE__, __LINE__, bytes_read, fd_out);
+      ulog(LOG_DEBUG, "Wrote %zd bytes to fd=%d", bytes_read, fd_out);
 
       /*
        * Now need to parse http messages. There may be multiple (and even partial) http
@@ -115,13 +130,16 @@ int pass_http_messages(int fd_in, int fd_out)
       ssize_t last_parsed  = 0;
       int max_loops = 5;
       do {
-	/*	fprintf(stderr, "%s(%d): About to parse from offset %d, where char=%c (%d)\n", __FILE__, __LINE__,
-		total_parsed, buffer[total_parsed], buffer[total_parsed]);*/
+	ulog(LOG_DEBUG, "About to parse from offset %zd, where char=%c (%d)\n",
+	     total_parsed, buffer[total_parsed], buffer[total_parsed]);
+
 	last_parsed = http_parser_execute(parser, &settings, buffer + total_parsed, bytes_read - total_parsed);
-	/*fprintf(stderr, "%s(%d): Parsed %d bytes from %d (total now %d; %d remains)\n", __FILE__, __LINE__, 
-		last_parsed, bytes_read, 
-		total_parsed + last_parsed,
-		bytes_read - total_parsed - last_parsed);*/
+
+	ulog(LOG_DEBUG, "Parsed %zd bytes from %zd (total now %zd; %zd remains)\n",
+	     last_parsed, bytes_read, 
+	     total_parsed + last_parsed,
+	     bytes_read - total_parsed - last_parsed);
+
 	if ( last_parsed < 0 ) {
 	  perror("Error reading HTTP message stream");
 	  errors++;
@@ -139,7 +157,7 @@ int pass_http_messages(int fd_in, int fd_out)
 	 * (TODO: remove global). Need to check this and restart the parser if that happened.
 	 */
 	if ( 1 == __http_message_complete ) {
-	  //fprintf(stderr, "%s(%d): Complete message detected. Resetting parser.\n", __FILE__, __LINE__);
+	  ulog(LOG_DEBUG, "Complete message detected. Resetting parser.");
 	  http_parser_init(parser, HTTP_BOTH);
 	  __http_message_complete = 0;
 	}
@@ -162,6 +180,8 @@ int pass_http_messages(int fd_in, int fd_out)
 
 int main(int argc, char *argv[])
 {
+  ulog_init(argv[0]);
+
   __url = malloc(sizeof(char) * SSIZE_MAX);
   if ( NULL == __url ) {
     perror("Error from malloc");
@@ -169,6 +189,9 @@ int main(int argc, char *argv[])
   }
 
   int rc = pass_http_messages(STDIN_FILENO, STDOUT_FILENO);
+
   free(__url);
+  ulog_close();
+
   return rc;
 }

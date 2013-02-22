@@ -416,14 +416,7 @@ int http_message_needs_eof(const http_parser *parser);
  * Set all callback values to NULL.
  */
 void init_http_parser_settings(struct http_parser_settings *hps) {
-  hps->on_message_begin = NULL;
-  hps->on_url = NULL;
-  hps->on_status_complete = NULL;
-  hps->on_header_field = NULL;
-  hps->on_header_value = NULL;
-  hps->on_headers_complete = NULL;
-  hps->on_body = NULL;
-  hps->on_message_complete = NULL;
+  memset(hps, 0, sizeof(struct http_parser_settings));
 }
 
 
