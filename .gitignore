@@ -20,6 +20,7 @@
 /src/log
 /src/noop
 /src/null
+/src/pipeif
 
 # Editor cruft
 *~
