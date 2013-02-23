@@ -36,7 +36,6 @@ ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write)
  */
 ssize_t pass_through(const int fd_in, const int fd_out)
 {
-  int     rc = EX_OK;
   char    *buf = NULL;
   ssize_t br = 0;
   ssize_t total_bytes = 0;
