@@ -6,8 +6,7 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 		  $(top_srcdir)/build-aux/tap-driver.sh
 
 # for "make test"
-test:
-	(cd src && make test)
+test: check
 
 # for "make dist"
 EXTRA_DIST = exp/perl/App-TTT.tar.gz $(TESTS) 

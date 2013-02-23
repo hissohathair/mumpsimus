@@ -12,15 +12,8 @@ AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
 # Checks for programs.
 AC_PROG_CC
-#AC_PROG_SED
-#AC_PROG_AWK
-
-# Checks for more programs :)
-AC_ARG_VAR([PROVE], [Perl testsuite harness to use (prove or perl)])
-AC_PATH_PROGS([PROVE], [prove perl])
 
 # Checks for libraries.
-#AC_CHECK_LIB(curl, curl_version) 
 #AC_CHECK_LIB( [event], [event_enable_debug_mode] )
 
 # Checks for header files.
