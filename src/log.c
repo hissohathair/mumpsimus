@@ -63,7 +63,7 @@ int cb_log_message_complete(http_parser *parser) {
 	     parser->http_major, 
 	     parser->http_minor, 
 	     parser->status_code,
-	     parser->nread + parser->content_length);
+	     (ssize_t)(parser->nread + parser->content_length));
   }
 
   if ( __volume > 0 )

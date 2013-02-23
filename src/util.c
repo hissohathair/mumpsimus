@@ -54,7 +54,6 @@ ssize_t pass_through(const int fd_in, const int fd_out)
     }
     else if ( br < 0 ) {
       perror("Error reading data");
-      rc = EX_IOERR;
     }
   } while ( br > 0 );
   
