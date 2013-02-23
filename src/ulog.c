@@ -1,5 +1,5 @@
 /*
- * logger.c: Common logging functions for programs.
+ * ulog.c: Common logging functions for programs.
  *
  * Currently just using / supporting syslog.
  *
@@ -54,7 +54,7 @@ void ulog_init(const char *ident)
       fprintf(stderr, "%s: ERROR -- %s must be a number between 1 and 7 (default=%d; got '%s')\n", ident, ULOG_ENVVAR, 
 	      default_log_level, getenv(ULOG_ENVVAR));
     else if ( (level < 0) || (level > 7) )
-      fprintf(stderr, "%s: WARNING -- %s must be value between 1 and 7 (default=%d; got %d)\n", ident, ULOG_ENVVAR,
+      fprintf(stderr, "%s: WARNING -- %s must be value between 1 and 7 (default=%d; got %ld)\n", ident, ULOG_ENVVAR,
 	      default_log_level, level);
     else
       default_log_level = (int)level;

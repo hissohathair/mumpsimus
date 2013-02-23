@@ -3,6 +3,12 @@
 
 #include <syslog.h>
 
+#ifdef DEBUG
+# define ulog_debug(...) ulog(LOG_DEBUG, __VAR_ARGS__)
+#else
+# define ulog_debug(...)
+#endif
+
 void ulog_init(const char *ident);
 void ulog(int priority, const char *message, ...);
 void ulog_close(void);
