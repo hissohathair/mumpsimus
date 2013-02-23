@@ -31,6 +31,6 @@ AC_CHECK_HEADERS([stdlib.h string.h unistd.h sysexits.h])
 AC_TYPE_SSIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memset])
+AC_CHECK_FUNCS([strlcat])
 
 AC_OUTPUT

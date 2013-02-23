@@ -41,9 +41,10 @@
  */
 ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write);
 ssize_t pass_through(const int fd_in, const int fd_out);
-void *memset_simple(void *b, int c, size_t len);
-#ifndef HAVE_MEMSET
-# define memset(a,b,c) memset_simple(a,b,c)
-#endif
 
-#endif
+#ifndef HAVE_STRLCAT
+size_t strlcat(char *dst, const char *src, size_t siz);
+#endif /* HAVE_STRLCAT */
+
+#endif /* __UTIL_H__ */
+
