@@ -21,7 +21,6 @@
  */
 static char *__url = NULL;
 static char *__headers = NULL;
-static char *__scratch = NULL;
 static int __http_message_complete = 0;
 static int __volume = 1; /* 0=quiet; 1=normal; 2=verbose */
 
@@ -60,7 +59,7 @@ int cb_log_message_complete(http_parser *parser) {
 	     parser->nread);
   }
   else {
-    snprintf(str, SSIZE_MAX, "[res] HTTP/%d.%d %d (%d bytes)",
+    snprintf(str, SSIZE_MAX, "[res] HTTP/%d.%d %d (%zd bytes)",
 	     parser->http_major, 
 	     parser->http_minor, 
 	     parser->status_code,
@@ -87,27 +86,34 @@ int cb_log_message_complete(http_parser *parser) {
  */
 int cb_log_url(http_parser *parser, const char *at, size_t length) 
 {
-  strncpy(__url, at, length);
-  __url[length] = '\0';
+  if ( length < SSIZE_MAX ) {
+    strncpy(__url, at, length);
+    __url[length] = '\0';
+  }
+  else {
+    strncpy(__url, at, SSIZE_MAX-1);
+    __url[SSIZE_MAX-1] = '\0';
+    ulog(LOG_ERR, "%s(%d): URL exceeded %zd bytes and was truncated", __FILE__, __LINE__, SSIZE_MAX);
+  }
   return 0;
 }
 
 int cb_log_header_field(http_parser *parser, const char *at, size_t length) 
 {
+  char *new_field = strndup(at, length);
   strlcat(__headers, "\t", SSIZE_MAX);
-  strncpy(__scratch, at, length);
-  __scratch[length] = '\0';
-  strlcat(__headers, __scratch, SSIZE_MAX);
+  strlcat(__headers, new_field, SSIZE_MAX);
   strlcat(__headers, ": ", SSIZE_MAX);
+  free(new_field);
   return 0;
 }
 
 int cb_log_header_value(http_parser *parser, const char *at, size_t length) 
 {
-  strncpy(__scratch,  at, length);
-  __scratch[length] = '\0';
-  strlcat(__headers, __scratch, SSIZE_MAX);
+  char *new_value = strndup(at, length);
+  strlcat(__headers, new_value, SSIZE_MAX);
   strlcat(__headers, "\n", SSIZE_MAX);
+  free(new_value);
   return 0;
 }
 
@@ -230,8 +236,7 @@ int main(int argc, char *argv[])
 {
   __url     = malloc(sizeof(char) * SSIZE_MAX);
   __headers = malloc(sizeof(char) * SSIZE_MAX);
-  __scratch = malloc(sizeof(char) * SSIZE_MAX);
-  if ( (NULL == __url) || (NULL == __headers) || (NULL == __scratch) ) {
+  if ( (NULL == __url) || (NULL == __headers) ) {
     perror("Error from malloc");
     return EX_OSERR;
   }
@@ -258,7 +263,6 @@ int main(int argc, char *argv[])
 
   int rc = pass_http_messages(STDIN_FILENO, STDOUT_FILENO);
 
-  free(__scratch);
   free(__headers);
   free(__url);
 
