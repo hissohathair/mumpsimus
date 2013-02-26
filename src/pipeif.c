@@ -203,11 +203,6 @@ int open_pipe(const char *cmd, int fds[2], pid_t *pid)
       abort();
     }
 
-    if ( fcntl(STDOUT_FILENO, F_NOCACHE, 1) == -1 ) {
-      perror("Error in fcntl when disabling cache");
-      /* TODO: Revisit this. Should we still continue or abort? */
-    }
-
     ulog(LOG_INFO, "Child has set up its end. About to exec: %s -c %s", _PATH_BSHELL, cmd);
     if ( execl(_PATH_BSHELL, _PATH_BSHELL, "-c", cmd, NULL) == -1 ) {
       ulog(LOG_ERR, "Child was not able to exec: %s -c %s", _PATH_BSHELL, cmd);
@@ -222,9 +217,6 @@ int open_pipe(const char *cmd, int fds[2], pid_t *pid)
   else {
     /* Am parent. I send data, so don't need read end of pipe. */
     close(fds[0]);
-    if ( fcntl(STDOUT_FILENO, F_NOCACHE, 1) == -1 ) {
-      perror("Error in fcntl when disabling cache");
-    }
     ulog(LOG_INFO, "Parent has set up its end. Child is pid=%d. Pipe fd=%d ", *pid, fds[1]);
   }
 
