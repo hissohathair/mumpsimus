@@ -32,7 +32,11 @@
  */
 #define LOG(x) fprintf(stderr, "%s(%d): %s\n", __FILE__, __LINE__, x)
 #ifndef SSIZE_MAX
-# define SSIZE_MAX 2048
+# ifndef _POSIX_SSIZE_MAX
+#  define SSIZE_MAX 32 * 1024
+# else
+#  define SSIZE_MAX _POSIX_SSIZE_MAX
+# endif
 #endif
 
 
