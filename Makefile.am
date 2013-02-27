@@ -1,4 +1,4 @@
-SUBDIRS = src t
+SUBDIRS = src . tests t
 
 # for "make check"
 TESTS = t/01noop.t t/02log.t t/03pipeif.t
