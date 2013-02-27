@@ -7,6 +7,4 @@ noop_SOURCES = noop.c util.c util.h ulog.h ulog.c
 null_SOURCES = noop.c util.c util.h ulog.h ulog.c
 pipeif_SOURCES = pipeif.c util.h util.c ulog.h ulog.c http_parser.h http_parser.c
 
-# for "make test"
-test: $(bin_PROGRAMS)
-	(cd .. && $(PROVE) t/*.t)
+

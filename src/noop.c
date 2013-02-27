@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
   size_t total_read = 0;
   size_t total_wrote = 0;
 
-  buf = (char*)malloc(sizeof(char) * SSIZE_MAX);
+  buf = (char*)malloc(sizeof(char) * BUFFER_MAX);
   if ( buf == NULL ) {
     perror("Error from malloc");
     return EX_OSERR;
@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
   ulog(LOG_INFO, "%s(%d): Starting %s (do_writes=%d)", __FILE__, __LINE__, argv[0], do_writes);
 
   do {
-    memset(buf, 0, SSIZE_MAX);
-    br = read(STDIN_FILENO, buf, SSIZE_MAX);
+    memset(buf, 0, BUFFER_MAX);
+    br = read(STDIN_FILENO, buf, BUFFER_MAX);
     ulog_debug("%s: Read %zd bytes from fd=%d", argv[0], br, STDIN_FILENO);
 
     if ( br > 0 )

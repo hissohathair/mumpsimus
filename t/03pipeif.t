@@ -10,6 +10,7 @@ use Test::More;
 
 BEGIN {
     $ENV{PATH} = './src:.:' . $ENV{PATH};
+    $ENV{ULOG_LEVEL} = 4;
 }
 
 
@@ -27,7 +28,7 @@ else {
     fail( 'Server header was completely missing' );
 }
 
-$cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $TEST_FILE );
+$cmd = Test::Command->new( cmd => q{pipeif -b -c noop < } . $TEST_FILE );
 my $expected = `cat $TEST_FILE`;
 $cmd->exit_is_num( 0, 'noop test exited normally' );
 $cmd->stderr_is_eq( '', 'no error messages on stderr' );

@@ -40,15 +40,15 @@ ssize_t pass_through(const int fd_in, const int fd_out)
   ssize_t br = 0;
   ssize_t total_bytes = 0;
 
-  buf = (char*)malloc(sizeof(char) * SSIZE_MAX);
+  buf = (char*)malloc(sizeof(char) * BUFFER_MAX);
   if ( buf == NULL ) {
     perror("Error from malloc");
     abort();
   }
 
   do {
-    memset(buf, 0, SSIZE_MAX);
-    br = read(fd_in, buf, SSIZE_MAX);
+    memset(buf, 0, BUFFER_MAX);
+    br = read(fd_in, buf, BUFFER_MAX);
     if ( br > 0 ) {
       total_bytes += write_all(fd_out, buf, br);
     }

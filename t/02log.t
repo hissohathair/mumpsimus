@@ -10,6 +10,7 @@ use Test::More;
 
 BEGIN {
     $ENV{PATH} = './src:.:' . $ENV{PATH};
+    $ENV{ULOG_LEVEL} = 4;
 }
 
 

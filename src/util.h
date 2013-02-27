@@ -4,13 +4,15 @@
  * After including this file, the caller can
  *   - rely on a subset of sysexits.h defines existing (see below)
  *   - rely on memset (even if HAVE_MEMSET is still undefined)
- *   - use SSIZE_MAX for buffers sizing
+ *   - use BUFFER_MAX for buffers sizing
  *   - config.h will have been included (if it exists)
  * As well as use the macro and function prototypes below.
  */
 
 #ifndef __UTIL_H__
 #define __UTIL_H__
+
+#include <sys/types.h>
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -30,13 +32,8 @@
 /* 
  * Occassionally useful macros.
  */
-#define LOG(x) fprintf(stderr, "%s(%d): %s\n", __FILE__, __LINE__, x)
-#ifndef SSIZE_MAX
-# ifndef _POSIX_SSIZE_MAX
-#  define SSIZE_MAX 32 * 1024
-# else
-#  define SSIZE_MAX _POSIX_SSIZE_MAX
-# endif
+#ifndef BUFFER_MAX
+#  define BUFFER_MAX 32 * 1024
 #endif
 
 

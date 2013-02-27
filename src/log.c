@@ -43,7 +43,7 @@ void usage(const char *ident)
  */
 int cb_log_message_complete(http_parser *parser) {
 
-  char *str = malloc(sizeof(char) * SSIZE_MAX);
+  char *str = malloc(sizeof(char) * BUFFER_MAX);
   if ( NULL == str ) {
     perror("Unable to malloc for logging");
     return 0;
@@ -51,7 +51,7 @@ int cb_log_message_complete(http_parser *parser) {
 
   /* builds the correct log message */
   if ( 0 == parser->type ) {
-    snprintf(str, SSIZE_MAX, "[req] %s %s HTTP/%d.%d (%d bytes)",
+    snprintf(str, BUFFER_MAX, "[req] %s %s HTTP/%d.%d (%d bytes)",
 	     http_method_str(parser->method), 
 	     ((__url == NULL || !__url[0]) ? "unknown" : __url), 
 	     parser->http_major, 
@@ -59,7 +59,7 @@ int cb_log_message_complete(http_parser *parser) {
 	     parser->nread);
   }
   else {
-    snprintf(str, SSIZE_MAX, "[res] HTTP/%d.%d %d (%zd bytes)",
+    snprintf(str, BUFFER_MAX, "[res] HTTP/%d.%d %d (%zd bytes)",
 	     parser->http_major, 
 	     parser->http_minor, 
 	     parser->status_code,
@@ -86,14 +86,14 @@ int cb_log_message_complete(http_parser *parser) {
  */
 int cb_log_url(http_parser *parser, const char *at, size_t length) 
 {
-  if ( length < SSIZE_MAX ) {
+  if ( length < BUFFER_MAX ) {
     strncpy(__url, at, length);
     __url[length] = '\0';
   }
   else {
-    strncpy(__url, at, SSIZE_MAX-1);
-    __url[SSIZE_MAX-1] = '\0';
-    ulog(LOG_ERR, "%s(%d): URL exceeded %zd bytes and was truncated", __FILE__, __LINE__, SSIZE_MAX);
+    strncpy(__url, at, BUFFER_MAX-1);
+    __url[BUFFER_MAX-1] = '\0';
+    ulog(LOG_ERR, "%s(%d): URL exceeded %zd bytes and was truncated", __FILE__, __LINE__, BUFFER_MAX);
   }
   return 0;
 }
@@ -101,9 +101,9 @@ int cb_log_url(http_parser *parser, const char *at, size_t length)
 int cb_log_header_field(http_parser *parser, const char *at, size_t length) 
 {
   char *new_field = strndup(at, length);
-  strlcat(__headers, "\t", SSIZE_MAX);
-  strlcat(__headers, new_field, SSIZE_MAX);
-  strlcat(__headers, ": ", SSIZE_MAX);
+  strlcat(__headers, "\t", BUFFER_MAX);
+  strlcat(__headers, new_field, BUFFER_MAX);
+  strlcat(__headers, ": ", BUFFER_MAX);
   free(new_field);
   return 0;
 }
@@ -111,8 +111,8 @@ int cb_log_header_field(http_parser *parser, const char *at, size_t length)
 int cb_log_header_value(http_parser *parser, const char *at, size_t length) 
 {
   char *new_value = strndup(at, length);
-  strlcat(__headers, new_value, SSIZE_MAX);
-  strlcat(__headers, "\n", SSIZE_MAX);
+  strlcat(__headers, new_value, BUFFER_MAX);
+  strlcat(__headers, "\n", BUFFER_MAX);
   free(new_value);
   return 0;
 }
@@ -144,7 +144,7 @@ int pass_http_messages(int fd_in, int fd_out)
   }
   http_parser_init(parser, HTTP_BOTH);
 
-  char *buffer = malloc(sizeof(char) * SSIZE_MAX);
+  char *buffer = malloc(sizeof(char) * BUFFER_MAX);
   if ( buffer == NULL ) {
     perror("Error from malloc");
     abort();
@@ -153,8 +153,8 @@ int pass_http_messages(int fd_in, int fd_out)
   ssize_t bytes_read = 0;
   do {
     /* Reading from source until eof */
-    memset(buffer, 0, SSIZE_MAX);
-    bytes_read = read(fd_in, buffer, SSIZE_MAX);
+    memset(buffer, 0, BUFFER_MAX);
+    bytes_read = read(fd_in, buffer, BUFFER_MAX);
     ulog(LOG_DEBUG, "Read %zd bytes from fd=%d", bytes_read, fd_in);
 
     /* br==0 means eof which has to be processed by the parser just like data read */
@@ -234,8 +234,8 @@ int pass_http_messages(int fd_in, int fd_out)
  */
 int main(int argc, char *argv[])
 {
-  __url     = malloc(sizeof(char) * SSIZE_MAX);
-  __headers = malloc(sizeof(char) * SSIZE_MAX);
+  __url     = malloc(sizeof(char) * BUFFER_MAX);
+  __headers = malloc(sizeof(char) * BUFFER_MAX);
   if ( (NULL == __url) || (NULL == __headers) ) {
     perror("Error from malloc");
     return EX_OSERR;

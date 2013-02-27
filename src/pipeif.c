@@ -120,7 +120,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   parser.data = (void*)&pset;
 
 
-  char *buffer = malloc(sizeof(char) * SSIZE_MAX);
+  char *buffer = malloc(sizeof(char) * BUFFER_MAX);
   if ( NULL == buffer ) {
     perror("Error from malloc");
     abort();
@@ -131,9 +131,9 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   ssize_t bytes_read  = 0;
   char *buf_ptr = buffer;
   do {
-    memset(buffer, 0, SSIZE_MAX);
+    memset(buffer, 0, BUFFER_MAX);
     buf_ptr = buffer;
-    bytes_read = read(fd_in, buffer, SSIZE_MAX);
+    bytes_read = read(fd_in, buffer, BUFFER_MAX);
     ulog_debug("Read %zd bytes from fd=%d", bytes_read, fd_in);
 
     while ( bytes_read >= 0 ) {
@@ -197,8 +197,8 @@ int open_pipe(const char *cmd, int fds[2], pid_t *pid)
      * to leave stdout pointing at stdout, but would prefer that unbuffered since
      * we're going to have a hell of a time keeping this output sane otherwise.
      */
-    close(STDIN_FILENO);
-    if ( dup(fds[0]) != STDIN_FILENO ) {
+    //qclose(STDIN_FILENO);
+    if ( dup2(fds[0], STDIN_FILENO) != STDIN_FILENO ) {
       perror("Could not dup2 pipe to stdin");
       abort();
     }
