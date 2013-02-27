@@ -3,18 +3,18 @@
 use warnings;
 use strict;
 
-use lib './t/lib';
+use lib './lib';
 
 use Test::Command tests => 5;
 use Test::More;
 
 BEGIN {
-    $ENV{PATH} = './src:.:' . $ENV{PATH};
+    $ENV{PATH} = '../src:.:' . $ENV{PATH};
     $ENV{ULOG_LEVEL} = 4;
 }
 
 
-my $TEST_FILE = './t/test-data/sample-response-302.txt';
+my $TEST_FILE = './test-data/sample-response-302.txt';
 
 my $cmd = Test::Command->new( cmd => q{pipeif -h -c "sed -e 's/^Server:.*$/Server: banana/' " < } . $TEST_FILE  );
 

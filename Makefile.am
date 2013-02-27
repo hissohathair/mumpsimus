@@ -1,9 +1,4 @@
-SUBDIRS = src . tests t
-
-# for "make check"
-TESTS = t/01noop.t t/02log.t t/03pipeif.t
-TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-		  $(top_srcdir)/build-aux/tap-driver.sh
+SUBDIRS = src unit-tests system-tests
 
 # for "make test"
 test: check

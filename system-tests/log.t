@@ -3,18 +3,18 @@
 use warnings;
 use strict;
 
-use lib './t/lib';
+use lib './lib';
 
 use Test::Command tests => 16;
 use Test::More;
 
 BEGIN {
-    $ENV{PATH} = './src:.:' . $ENV{PATH};
+    $ENV{PATH} = '../src:.:' . $ENV{PATH};
     $ENV{ULOG_LEVEL} = 4;
 }
 
 
-my @TEST_FILES = ( './t/test-data/sample-request-get.txt', './t/test-data/sample-response-302.txt' );
+my @TEST_FILES = ( './test-data/sample-request-get.txt', './test-data/sample-response-302.txt' );
 
 # 1-8: simple requests 
 foreach my $testf ( @TEST_FILES ) {
@@ -48,5 +48,5 @@ $cmd->exit_is_num(0, 'log exited with zero for concatenated http messages (doubl
 is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message generated (doubled)');
 
 # 16: BUG -- zero bytes being reported
-$cmd = Test::Command->new( cmd => 'log < ./t/test-data/sample-request-get.txt' );
+$cmd = Test::Command->new( cmd => 'log < ./test-data/sample-request-get.txt' );
 $cmd->stderr_is_eq( "log.c: [req] GET http://www.google.com/ HTTP/1.1 (527 bytes)\n", 'Counted 527 bytes correctly' );

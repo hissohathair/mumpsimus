@@ -21,7 +21,7 @@
 /src/noop
 /src/null
 /src/pipeif
-/tests/check_stream_buffer
+/unit-tests/check_stream_buffer
 
 # Editor cruft
 *~

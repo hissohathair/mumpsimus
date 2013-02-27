@@ -6,7 +6,7 @@ use strict;
 use Test::More tests => 3;
 
 BEGIN {
-    $ENV{PATH} = './src:.:' . $ENV{PATH};
+    $ENV{PATH} = '../src:.:' . $ENV{PATH};
 }
 
 
