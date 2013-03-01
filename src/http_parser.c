@@ -251,6 +251,7 @@ enum state
   , s_res_http_minor
   , s_res_first_status_code
   , s_res_status_code
+  , s_res_status_begin
   , s_res_status
   , s_res_line_almost_done
 
@@ -595,6 +596,7 @@ size_t http_parser_execute (http_parser *parser,
   const char *header_value_mark = 0;
   const char *url_mark = 0;
   const char *body_mark = 0;
+  const char *status_complete_mark = 0;
 
   /* We're in an error state. Don't bother doing anything. */
   if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {
@@ -640,6 +642,13 @@ size_t http_parser_execute (http_parser *parser,
   case s_req_fragment_start:
   case s_req_fragment:
     url_mark = data;
+    break;
+
+  case s_res_status_begin:
+  case s_res_status:
+  case s_res_line_almost_done:
+  case s_res_status_code:
+    status_complete_mark = data;
     break;
   }
 
@@ -829,6 +838,7 @@ size_t http_parser_execute (http_parser *parser,
         }
         parser->status_code = ch - '0';
         parser->state = s_res_status_code;
+	MARK(status_complete);
         break;
       }
 
@@ -837,12 +847,13 @@ size_t http_parser_execute (http_parser *parser,
         if (!IS_NUM(ch)) {
           switch (ch) {
             case ' ':
-              parser->state = s_res_status;
+              parser->state = s_res_status_begin;
               break;
             case CR:
               parser->state = s_res_line_almost_done;
               break;
             case LF:
+	      CALLBACK_DATA(status_complete);
               parser->state = s_header_field_start;
               break;
             default:
@@ -863,16 +874,22 @@ size_t http_parser_execute (http_parser *parser,
         break;
       }
 
-      case s_res_status:
+      case s_res_status_begin:
         /* the human readable status. e.g. "NOT FOUND"
-         * we are not humans so just ignore this */
+         * we are human after all so giving a shit now */
+	parser->state = s_res_status;
+	break;
+
+    case s_res_status:
         if (ch == CR) {
           parser->state = s_res_line_almost_done;
+	  CALLBACK_DATA(status_complete);
           break;
         }
 
         if (ch == LF) {
           parser->state = s_header_field_start;
+	  CALLBACK_DATA(status_complete);
           break;
         }
         break;
@@ -880,7 +897,6 @@ size_t http_parser_execute (http_parser *parser,
       case s_res_line_almost_done:
         STRICT_CHECK(ch != LF);
         parser->state = s_header_field_start;
-        CALLBACK_NOTIFY(status_complete);
         break;
 
       case s_start_req:
@@ -1847,11 +1863,13 @@ size_t http_parser_execute (http_parser *parser,
   assert(((header_field_mark ? 1 : 0) +
           (header_value_mark ? 1 : 0) +
           (url_mark ? 1 : 0)  +
+	  (status_complete_mark ? 1 : 0) +
           (body_mark ? 1 : 0)) <= 1);
 
   CALLBACK_DATA_NOADVANCE(header_field);
   CALLBACK_DATA_NOADVANCE(header_value);
   CALLBACK_DATA_NOADVANCE(url);
+  CALLBACK_DATA_NOADVANCE(status_complete);
   CALLBACK_DATA_NOADVANCE(body);
 
   return len;

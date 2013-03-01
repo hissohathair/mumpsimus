@@ -1,17 +1,15 @@
 HTTP/1.1 302 Found
-Cache-Control: private
-Connection: Close
-Date: Tue, 13 Jan 2009 15:11:01 GMT
 Location: http://www.google.com.au/
+Cache-Control: private
+Content-Type: text/html; charset=UTF-8
+Set-Cookie: PREF=ID=219c833ce4de4e18:FF=0:TM=1362143737:LM=1362143737:S=zKrarRqn_Pj0O1Uw; expires=Sun, 01-Mar-2015 13:15:37 GMT; path=/; domain=.google.com
+Set-Cookie: NID=67=N660dDeLzn1X1d1a-nTi4KvbhCnrfDyk_rM8Gtw6SlYR9ZCmW0cdXajjtRNwLBdD6djPoL-fiisa0mq90M79q6gbEfp3amy59lF1tvFOrsr9cv0tu0aii4T2Dc2rkFMG; expires=Sat, 31-Aug-2013 13:15:37 GMT; path=/; domain=.google.com; HttpOnly
+P3P: CP="This is not a P3P policy! See http://www.google.com/support/accounts/bin/answer.py?hl=en&answer=151657 for more info."
+Date: Fri, 01 Mar 2013 13:15:37 GMT
 Server: gws
 Content-Length: 222
-Content-Type: text/html; charset=UTF-8
-Content-Type: text/html;charset=utf-8
-Client-Date: Tue, 13 Jan 2009 15:11:01 GMT
-Client-Peer: 74.125.19.103:80
-Client-Response-Num: 1
-Set-Cookie: PREF=ID=1c9f99b2453a462c:TM=1231859461:LM=1231859461:S=3jHq06u1it8Yreq2; expires=Thu, 13-Jan-2011 15:11:01 GMT; path=/; domain=.google.com
-Title: 302 Moved
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
 
 <HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
 <TITLE>302 Moved</TITLE></HEAD><BODY>

@@ -76,10 +76,9 @@ int cb_headers_complete(http_parser *parser)
 	     parser->http_minor);
   }
   else {
-    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
+    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %s\r\n",
 	     parser->http_major, 
 	     parser->http_minor, 
-	     parser->status_code,
 	     pset->url);
   }
 
@@ -97,6 +96,21 @@ int cb_headers_complete(http_parser *parser)
   return 0;
 }
 
+int cb_status_complete(http_parser *parser, const char *at, size_t length)
+{
+  struct pipe_settings *pset = (struct pipe_settings*)parser->data;
+
+  if ( length < URL_MAX ) {
+    strncpy(pset->url, at, length);
+    pset->url[length] = '\0';
+  }
+  else {
+    strncpy(pset->url, at, URL_MAX-1);
+    pset->url[URL_MAX] = '\0';
+  }
+  ulog_debug("HTTP response status: %s", pset->url);
+  return 0;
+}
 
 
 int cb_header_field(http_parser *parser, const char *at, size_t length)
@@ -162,6 +176,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   settings.on_header_field = cb_header_field;
   settings.on_header_value = cb_header_value;
   settings.on_headers_complete = cb_headers_complete;
+  settings.on_status_complete = cb_status_complete;
   settings.on_url = cb_url;
   settings.on_body = cb_body;
 
