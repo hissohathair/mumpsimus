@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 6;
+use Test::Command tests => 9;
 use Test::More;
 
 BEGIN {
@@ -49,8 +49,15 @@ $cmd->exit_is_num( 0, 'No-op test exited normally' );
 $cmd->stderr_is_eq( '', 'No error messages on stderr' );
 $cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
 
+# 7-9: Body transformation (again with noop), this time send headers through pipe
+$cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $BODY_TEST_FILE );
+$expected = `cat $BODY_TEST_FILE`;
+$cmd->exit_is_num( 0, 'No-op test exited normally' );
+$cmd->stderr_is_eq( '', 'No error messages on stderr' );
+
 ### TODO: Under Construction -- expected to fail
 $cmd->builder->todo_start( 'Under construction' );
+$cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
 $cmd->builder->todo_end();
 ### END TODO
 
