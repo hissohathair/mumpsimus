@@ -35,7 +35,9 @@
 #ifndef BUFFER_MAX
 #  define BUFFER_MAX 32 * 1024
 #endif
-
+#ifndef URL_MAX
+#  define URL_MAX 2048
+#endif
 
 /*
  * Function prototypes.

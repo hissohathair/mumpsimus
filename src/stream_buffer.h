@@ -13,7 +13,7 @@ struct Stream_Buffer {
   size_t max_size;
 };
 
-struct Stream_Buffer* stream_buffer_new();
+struct Stream_Buffer* stream_buffer_new(void);
 void stream_buffer_delete(struct Stream_Buffer *buf);
 size_t stream_buffer(struct Stream_Buffer *buf, const char *nbuff, const size_t length);
 void stream_buffer_clear(struct Stream_Buffer *buf);

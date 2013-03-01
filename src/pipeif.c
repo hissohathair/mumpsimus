@@ -18,6 +18,7 @@
 #include "http_parser.h"
 #include "util.h"
 #include "ulog.h"
+#include "stream_buffer.h"
 
 
 #define PIPE_HEADER 0x01
@@ -29,50 +30,91 @@ struct pipe_settings {
   int    fd_pipe;
   int    http_message_complete;
   int    pipe_parts;
+  char  *url;
+  struct Stream_Buffer *sbuf;
 };
 
 
-int cb_header_field(http_parser *parser, const char *at, size_t length)
+/*
+ * cb_url: Callback from http_parser, called when URL read. Preserves
+ * the URL for later.
+ */
+int cb_url(http_parser *parser, const char *at, size_t length) 
 {
   struct pipe_settings *pset = (struct pipe_settings*)parser->data;
 
-  int fd = pset->fd_out;
-  if ( pset->pipe_parts & PIPE_HEADER )
-    fd = pset->fd_pipe;
-  ulog_debug("cb_header_field(parser=%X, at=%X, length=%zd) -> fd=%d", parser, at, length, fd);
-
-  write_all(fd, at, length);
-  write_all(fd, ": ", 2);  
+  if ( length < URL_MAX ) {
+    strncpy(pset->url, at, length);
+    pset->url[length] = '\0';
+  }
+  else {
+    strncpy(pset->url, at, URL_MAX-1);
+    pset->url[URL_MAX-1] = '\0';
+    ulog(LOG_ERR, "URL exceeded %zd bytes and was truncated", URL_MAX);
+  }
+  ulog_debug("Recorded URL of HTTP message: %s", pset->url);
   return 0;
 }
 
-int cb_header_value(http_parser *parser, const char *at, size_t length)
-{
-  struct pipe_settings *pset = (struct pipe_settings*)parser->data;
-
-  int fd = pset->fd_out;
-  if ( pset->pipe_parts & PIPE_HEADER )
-    fd = pset->fd_pipe;
-  ulog_debug("cb_header_value(parser=%X, at=%X, length=%zd) -> fd=%d", parser, at, length, fd);
-
-  write_all(fd, at, length);
-  write_all(fd, "\n", 1);
-  return 0;
-}
 
 int cb_headers_complete(http_parser *parser)
 {
   struct pipe_settings *pset = (struct pipe_settings*)parser->data;
+
+  char *str = malloc(sizeof(char) * BUFFER_MAX);
+  if ( NULL == str ) {
+    perror("Error in malloc");
+    return -1;
+  }
+
+  /* builds the correct log message */
+  if ( 0 == parser->type ) {
+    snprintf(str, BUFFER_MAX, "%s %s HTTP/%d.%d\r\n",
+	     http_method_str(parser->method), 
+	     pset->url,
+	     parser->http_major, 
+	     parser->http_minor);
+  }
+  else {
+    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
+	     parser->http_major, 
+	     parser->http_minor, 
+	     parser->status_code,
+	     pset->url);
+  }
 
   int fd = pset->fd_out;
   if ( pset->pipe_parts & PIPE_HEADER )
     fd = pset->fd_pipe;
   ulog_debug("cb_headers_complete(parser=%X) -> fd=%d", parser, fd);
 
-  write_all(fd, "\n", 1);
+  write_all(fd, str, strlen(str));
+  stream_buffer(pset->sbuf, "\r\n", 2);
+  stream_buffer_write(pset->sbuf, fd);
+
+  free(str);
 
   return 0;
 }
+
+
+
+int cb_header_field(http_parser *parser, const char *at, size_t length)
+{
+  struct pipe_settings *pset = (struct pipe_settings*)parser->data;
+  stream_buffer(pset->sbuf, at, length);
+  stream_buffer(pset->sbuf, ": ", 2);  
+  return 0;
+}
+
+int cb_header_value(http_parser *parser, const char *at, size_t length)
+{
+  struct pipe_settings *pset = (struct pipe_settings*)parser->data;
+  stream_buffer(pset->sbuf, at, length);
+  stream_buffer(pset->sbuf, "\r\n", 2);
+  return 0;
+}
+
 
 int cb_body(http_parser *parser, const char *at, size_t length)
 {
@@ -102,17 +144,25 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   int rc = EX_OK;
 
   struct pipe_settings pset;
-  pset.fd_in   = fd_in;
-  pset.fd_out  = fd_out;
+  pset.fd_in = fd_in;
+  pset.fd_out = fd_out;
   pset.fd_pipe = fd_pipe;
   pset.pipe_parts = pipe_parts;
   pset.http_message_complete = 0;
+  pset.url = malloc(sizeof(char) * URL_MAX);
+  pset.sbuf = stream_buffer_new(); 
+  if ( NULL == pset.url || NULL == pset.sbuf ) {
+    perror("Error in malloc or stream buffer");
+    return -1;
+  }
+  pset.url[0] = '\0';
 
   http_parser_settings settings;
   init_http_parser_settings(&settings);
   settings.on_header_field = cb_header_field;
   settings.on_header_value = cb_header_value;
   settings.on_headers_complete = cb_headers_complete;
+  settings.on_url = cb_url;
   settings.on_body = cb_body;
 
   http_parser parser;
@@ -123,7 +173,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   char *buffer = malloc(sizeof(char) * BUFFER_MAX);
   if ( NULL == buffer ) {
     perror("Error from malloc");
-    abort();
+    return -1;
   }
 
 
@@ -158,6 +208,8 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   } while ( (bytes_read > 0) && (errors <= 0) );
 
   free(buffer);
+  free(pset.url); pset.url = NULL;
+  stream_buffer_delete(pset.sbuf);
 
   if ( errors > 0 )
     rc = EX_IOERR;

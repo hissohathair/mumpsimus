@@ -27,11 +27,11 @@ my $HEAD_TEST_FILE = $TEST_FILES[0];
 my $BODY_TEST_FILE = $TEST_FILES[1];
 
 # 1: Header transformation test (test file has header only)
-my $cmd = Test::Command->new( cmd => q{pipeif -h -c "sed -e 's/^DNT:.*$/DNT: banana/'" < } . $HEAD_TEST_FILE  );
+my $cmd = Test::Command->new( cmd => q{pipeif -h -c "sed -e 's/^DNT: 1/DNT: banana/'" < } . $HEAD_TEST_FILE  );
 $cmd->exit_is_num( 0, 'Command exited normally' );
 if ( $cmd->stdout_value =~ m/DNT: ([\w]+)/s ) {
     my $server = $1;
-    is( $server, 'banana', 'DNT header was changed to banana' );
+    is( $server, 'banana', 'DNT header was changed to "banana"' );
 }
 else {
     fail( 'DNT header was completely missing' );
@@ -39,7 +39,7 @@ else {
 
 # 2: Check that rest of header was preserved OK
 my $expected = `cat $HEAD_TEST_FILE`;
-$expected =~ s/^Server: gws$/Server: banana/s; 
+$expected =~ s/^DNT: 1/DNT: banana/gm; 
 $cmd->stdout_is_eq( $expected, 'Rest of headers were preserved OK' );
 
 # 3: Body transformation (with noop -- so no change really). Mainly making sure header/body order preserved
