@@ -1,4 +1,3 @@
-AM_CFLAGS = -std=gnu99
 
 bin_PROGRAMS = noop null log pipeif
 
