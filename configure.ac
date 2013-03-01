@@ -23,6 +23,7 @@ AM_CONDITIONAL([HAVE_CHECK], [test x$CHECK_LIBS != "x"])
 
 # Checks for libraries.
 #AC_CHECK_LIB( [event], [event_enable_debug_mode] )
+AC_SEARCH_LIBS([ceil], [m])
 
 # Checks for header files.
 AC_CHECK_HEADERS([unistd.h sysexits.h])

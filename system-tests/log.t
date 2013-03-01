@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use lib './lib';
+use lib './lib', './system-tests/lib';
 
 use Test::Command tests => 16;
 use Test::More;
@@ -19,7 +19,7 @@ my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
 for ( my $i = 0; $i <= $#TEST_FILES; $i++ ) {
     my $path = `find @SEARCH_DIR -name $TEST_FILES[$i] 2>/dev/null`;
     chomp($path);
-    diag("Test file $i at $path");
+    #diag("Test file $i at $path");
     $TEST_FILES[$i] = $path if ( $path );
 }
 
