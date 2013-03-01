@@ -9,12 +9,19 @@ use Test::Command tests => 16;
 use Test::More;
 
 BEGIN {
-    $ENV{PATH} = '../src:.:' . $ENV{PATH};
+    $ENV{PATH} = '../src:./src:' . $ENV{PATH};
     $ENV{ULOG_LEVEL} = 4;
 }
 
 
-my @TEST_FILES = ( './test-data/sample-request-get.txt', './test-data/sample-response-302.txt' );
+my @TEST_FILES = ( 'sample-request-get.txt', 'sample-response-302.txt' );
+my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
+for ( my $i = 0; $i <= $#TEST_FILES; $i++ ) {
+    my $path = `find @SEARCH_DIR -name $TEST_FILES[$i] 2>/dev/null`;
+    chomp($path);
+    diag("Test file $i at $path");
+    $TEST_FILES[$i] = $path if ( $path );
+}
 
 # 1-8: simple requests 
 foreach my $testf ( @TEST_FILES ) {
@@ -48,5 +55,5 @@ $cmd->exit_is_num(0, 'log exited with zero for concatenated http messages (doubl
 is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message generated (doubled)');
 
 # 16: BUG -- zero bytes being reported
-$cmd = Test::Command->new( cmd => 'log < ./test-data/sample-request-get.txt' );
+$cmd = Test::Command->new( cmd => 'log < ' . $TEST_FILES[0] );
 $cmd->stderr_is_eq( "log.c: [req] GET http://www.google.com/ HTTP/1.1 (527 bytes)\n", 'Counted 527 bytes correctly' );
