@@ -18,7 +18,7 @@ START_TEST(test_strlcat)
 
   /* Sanity check our own test environment */
   src_len = strlen(TEST_STRING);
-  ck_assert_int_gt(src_len, MAX_DST);
+  fail_unless(src_len > MAX_DST);
   ck_assert_str_eq(TEST_STRING, TEST_STRING);
 
   /* Test that copying part of a string only copies part, but that truncation detectable */
@@ -33,7 +33,7 @@ START_TEST(test_strlcat)
   ncat = strlcat(dst, TEST_STRING, MAX_DST);
   ck_assert_str_eq(dst, "123456789012345");
   ck_assert_int_eq(ncat, src_len);
-  ck_assert_int_gt(ncat, MAX_DST);
+  fail_unless(ncat > MAX_DST);
 }
 END_TEST
 
