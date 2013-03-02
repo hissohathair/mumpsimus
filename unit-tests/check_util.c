@@ -1,4 +1,5 @@
 #include <check.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +37,45 @@ START_TEST(test_strlcat)
 }
 END_TEST
 
+START_TEST(test_upper_power_of_two)
+{
+  /* check function */
+  static size_t test_pairs[][2] = 
+    {
+      { 0, 2 },
+      { 1, 2 },
+      { 7, 8 },
+      { 100, 128 },
+      { 1023, 1024 },
+      { 1024, 1024 },
+      { 1025, 2048 },
+      { 32 * 1024, 32 * 1024 },
+      { (32 * 1024) - 1, 32 * 1024 },
+      { (32 * 1024) + 1, 64 * 1024 },
+      { 64 * 1024, 64 * 1024 },
+      { (64 * 1024) - 1, 64 * 1024 },
+      { (64 * 1024) + 1, 128 * 1024 },
+      { 0, 2 },
+      { -1, -1 }
+    };
+
+  int i = 0;
+  while ( test_pairs[i][0] != -1 ) {
+    size_t testval  = test_pairs[i][0];
+    size_t expected = test_pairs[i][1];
+    size_t actual   = upper_power_of_two(testval);
+
+    ck_assert_int_eq(actual, expected);
+    i++;
+  }
+
+  /* TODO: test overflow behaviour */
+
+  /* checks that BUFFER_MAX is defined as a power of 2 */
+  ck_assert_int_eq(upper_power_of_two(BUFFER_MAX), BUFFER_MAX);
+}
+END_TEST
+
 Suite *util_suite(void)
 {
   Suite *s = suite_create("util_suite");
@@ -43,7 +83,8 @@ Suite *util_suite(void)
   /* Core test case */
   TCase *tc_core = tcase_create("Core");
   tcase_add_test(tc_core, test_strlcat);
-  suite_add_tcase (s, tc_core);
+  tcase_add_test(tc_core, test_upper_power_of_two);
+  suite_add_tcase(s, tc_core);
   return s;
 }
 

@@ -4,6 +4,7 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -21,6 +22,11 @@
 size_t upper_power_of_two(const size_t n)
 {
   size_t v = n;
+  if ( n <= 1 )
+    return 2;
+  else if ( SIZE_MAX == n )
+    return SIZE_MAX;
+
   v--;
   v |= v >> 1;
   v |= v >> 2;
