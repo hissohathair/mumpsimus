@@ -11,6 +11,26 @@
 #include "util.h"
 
 
+/*
+ * upper_power_of_two: Returns the nearest upper power of 2 number to
+ * the argument passed in. We only use it for size_t types.
+ *
+ * Credit: http://graphics.stanford.edu/~seander/bithacks.html
+ *     via http://stackoverflow.com/questions/466204/rounding-off-to-nearest-power-of-2
+ */
+size_t upper_power_of_two(const size_t n)
+{
+  size_t v = n;
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  v++;
+  return v;
+}
+
 /* 
  * write_all: Will retry interrupted write(2) calls until either an error
  * occurs or all bytes successfully written.

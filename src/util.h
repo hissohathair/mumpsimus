@@ -42,6 +42,7 @@
 /*
  * Function prototypes.
  */
+size_t upper_power_of_two(const size_t n);
 ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write);
 ssize_t pass_through(const int fd_in, const int fd_out);
 

@@ -12,6 +12,11 @@
 
 #include "ulog.h"
 
+/* Solaris does not support LOG_PERROR in syslog */
+#ifndef LOG_PERROR
+# define LOG_PERROR 0
+#endif
+
 static int __logger_initialised = 0;
 
 void ulog(int priority, const char *message, ...)

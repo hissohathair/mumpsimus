@@ -19,17 +19,15 @@ AX_CFLAGS_WARN_ALL
 # Check for packages
 #PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 AM_PATH_CHECK([0.9.4], [have_check="yes"], 
-		       AC_MSG_WARN([Check not present. No unit tests will be run.])
-		       [have_check="no"])
+	       AC_MSG_WARN([Check not present. No unit tests will be run.])
+	       [have_check="no"])
 AM_CONDITIONAL([HAVE_CHECK], [test x$have_check = "xyes"])
 
-# Checks for libraries.
-#AC_CHECK_LIB( [event], [event_enable_debug_mode] )
-AC_SEARCH_LIBS([ceil], [m])
+# Checks for header files. 
+#AC_CHECK_HEADERS([sys/types.h])
 
-# Checks for header files.
-AC_CHECK_HEADERS([unistd.h sysexits.h])
-#AC_CHECK_HEADERS([event2/event.h])
+# Checks for libraries.
+#AC_SEARCH_LIBS([ceil], [m])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SSIZE_T

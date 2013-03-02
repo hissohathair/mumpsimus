@@ -11,7 +11,12 @@ if [ "x$TRAVIS" = "xtrue" ] ; then
     echo "Running autoreconf to generate required build files"
     autoreconf -fi
 
-else
+elif [ -f config.status ] ; then
     echo "Not running under CI. Will not force autoreconf."
     autoreconf -vim
+
+else
+    echo "Config.status is missing. Will bootstrap."
+    autoconf 
+    ./configure && make
 fi

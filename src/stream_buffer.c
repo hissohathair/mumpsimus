@@ -2,8 +2,9 @@
  * stream_buffer.c: Provides a simple stream buffer for buffering output.
  */
 
+#include "config.h"
+
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,8 +57,7 @@ size_t stream_buffer(struct Stream_Buffer *buf, const char *nbuff, const size_t 
 
   /* Check for buffer overflow with current memory allocation */
   if ( buf->curr_size + length > buf->max_size ) {
-    /* http://stackoverflow.com/questions/466204/rounding-off-to-nearest-power-of-2 */
-    size_t new_size = pow(2.0, ceil(log((float)(buf->max_size + length) * 2.0) / log(2.0)));
+    size_t new_size = upper_power_of_two((buf->max_size + length) * 2);
 
     ulog_debug("Reallocating buffer from %ld to %ld bytes", buf->max_size, new_size);
     char *new_buff = realloc(buf->head, new_size);

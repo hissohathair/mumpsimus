@@ -1,7 +1,7 @@
 language: c
 
 before_script:
-  - ./build-aux/prepare-travis-ci
+  - ./build-aux/prepare-build-env
 
 compiler:
   - gcc
