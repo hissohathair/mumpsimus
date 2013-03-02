@@ -17,9 +17,11 @@ AC_PROG_CC_C99
 AX_CFLAGS_WARN_ALL
 
 # Check for packages
-AM_PATH_CHECK([0.9.4], [], [AC_MSG_WARN([Check not present. No unit tests will be run.])])
-AM_CONDITIONAL([HAVE_CHECK], [test x$CHECK_LIBS != "x"])
 #PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
+AM_PATH_CHECK([0.9.4], [have_check="yes"], 
+		       AC_MSG_WARN([Check not present. No unit tests will be run.])
+		       [have_check="no"])
+AM_CONDITIONAL([HAVE_CHECK], [test x$have_check = "xyes"])
 
 # Checks for libraries.
 #AC_CHECK_LIB( [event], [event_enable_debug_mode] )
