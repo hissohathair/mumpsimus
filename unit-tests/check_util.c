@@ -65,14 +65,14 @@ START_TEST(test_upper_power_of_two)
     size_t expected = test_pairs[i][1];
     size_t actual   = upper_power_of_two(testval);
 
-    ck_assert_int_eq(actual, expected);
+    fail_unless( actual == expected );
     i++;
   }
 
   /* TODO: test overflow behaviour */
 
   /* checks that BUFFER_MAX is defined as a power of 2 */
-  ck_assert_int_eq(upper_power_of_two(BUFFER_MAX), BUFFER_MAX);
+  fail_unless(upper_power_of_two(BUFFER_MAX) == BUFFER_MAX);
 }
 END_TEST
 
