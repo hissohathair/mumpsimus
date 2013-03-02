@@ -18,16 +18,6 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_SYSEXITS_H
-# include <sysexits.h>
-#else
-# define EX_OK 0
-# define EX_USAGE 64
-# define EX_UNAVAILABLE 69
-# define EX_OSERR 71
-# define EX_IOERR 74
-#endif
-
 
 /* 
  * Occassionally useful macros.
