@@ -32,12 +32,12 @@ int main(int argc, char *argv[])
 
   if ( strcmp(argv[0] + strlen(argv[0]) - 4, "null") == 0 )
     do_writes = 0;
-  ulog(LOG_INFO, "%s(%d): Starting %s (do_writes=%d)", __FILE__, __LINE__, argv[0], do_writes);
+  ulog(LOG_INFO, "Starting %s (do_writes=%d; buffer size=%d)", argv[0], do_writes, BUFFER_MAX);
 
   do {
     memset(buf, 0, BUFFER_MAX);
     br = read(STDIN_FILENO, buf, BUFFER_MAX);
-    ulog_debug("%s: Read %zd bytes from fd=%d", argv[0], br, STDIN_FILENO);
+    ulog_debug("Read %zd bytes from fd=%d", br, STDIN_FILENO);
 
     if ( br > 0 )
       total_read += (size_t)br;
@@ -46,13 +46,14 @@ int main(int argc, char *argv[])
 
     if ( do_writes && br >= 1 ) {
       ssize_t nw = write_all(STDOUT_FILENO, buf, br);
+      ulog_debug("Wrote %zd bytes to fd=%d", nw, STDOUT_FILENO);
       if ( nw > 0 )
 	total_wrote += (size_t)nw;
     }
 
   } while ( br > 0 );
 
-  ulog(LOG_INFO, "%s: EOF reached. Read %zd; Wrote %zd bytes. Exiting.", argv[0], total_read, total_wrote);
+  ulog(LOG_INFO, "EOF reached. Read %zd; Wrote %zd bytes. Exiting.", total_read, total_wrote);
 
   free(buf);
   ulog_close();
