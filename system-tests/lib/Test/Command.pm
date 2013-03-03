@@ -217,6 +217,10 @@ sub run
    {
    my ($self) = @_;
 
+   ## remove previous stdout/stderr tempfiles
+   unlink $self->{'result'}{'stdout_file'} if ( $self->{'result'}{'stdout_file'} && -f $self->{'result'}{'stdout_file'} );
+   unlink $self->{'result'}{'stderr_file'} if ( $self->{'result'}{'stderr_file'} && -f $self->{'result'}{'stderr_file'} );
+
    my $run_info = _run_cmd( $self->{'cmd'} );
 
    $self->{'result'}{'exit_status'} = $run_info->{'exit_status'};
@@ -432,6 +436,8 @@ sub _run_cmd
    ## close and restore STDOUT and STDERR to original handles
    close STDOUT or confess "failed to close STDOUT: $!";
    close STDERR or confess "failed to close STDERR: $!";
+   close $temp_stdout_fh;
+   close $temp_stderr_fh;
    open STDOUT, '>&' . fileno $saved_stdout or confess 'Cannot restore STDOUT';
    open STDERR, '>&' . fileno $saved_stderr or confess 'Cannot restore STDERR';
 

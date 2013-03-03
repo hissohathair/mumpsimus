@@ -91,6 +91,7 @@ int cb_headers_complete(http_parser *parser)
   write_all(fd, str, strlen(str));
   stream_buffer(pset->sbuf, "\r\n", 2);
   stream_buffer_write(pset->sbuf, fd);
+  usleep(5000);
 
   free(str);
 

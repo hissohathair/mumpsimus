@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 9;
+use Test::Command tests => 12;
 use Test::More;
 
 BEGIN {
@@ -54,10 +54,23 @@ $cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 $cmd->exit_is_num( 0, 'No-op test exited normally' );
 $cmd->stderr_is_eq( '', 'No error messages on stderr' );
+$cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
+
+# 10-12: Say that 100 times really fast...
+my $TEST_RUNS = 1000;
+my %errors = ( exit_val => 0, stdout_val => 0, stderr_val => 0, );
+for ( my $i = 0; $i < $TEST_RUNS; $i++ ) {
+    $cmd->run();
+    $errors{exit_val}++   if ( $cmd->exit_value != 0 );
+    $errors{stderr_val}++ if ( $cmd->stderr_value ne '' );
+    $errors{stdout_val}++ if ( $cmd->stdout_value ne $expected );
+}
+is( 0, $errors{exit_val},   "Exited without error (repeated $TEST_RUNS times without errors)" );
+is( 0, $errors{stderr_val}, "No error messages on stderr (repeated $TEST_RUNS times without errors)" );
+is( 0, $errors{stdout_val}, "Piping through noop was genuine no-op repeated $TEST_RUNS times without errors)" );
 
 ### TODO: Under Construction -- expected to fail
 $cmd->builder->todo_start( 'Under construction' );
-$cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
 $cmd->builder->todo_end();
 ### END TODO
 
