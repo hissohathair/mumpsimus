@@ -3,7 +3,8 @@
 use warnings;
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 7;
+use Test::Command;
 
 BEGIN {
     $ENV{PATH} = '../src:./src:' . $ENV{PATH};
@@ -20,6 +21,14 @@ is( $actual, $expected,   'noop does not modify output' );
 $actual = `cat Makefile | null`;
 is( $actual, '', 'null consumes all output' );
 
+# 4: dup says everything twice says everything twice
+$actual = `echo one | dup 2>&1`;
+$expected = "one\none\n";
+is( $actual, $expected, 'dup says everything twice' );
 
-
-
+# 5: More thorough test of dup
+$expected = `cat Makefile`;
+my $cmd = Test::Command->new( cmd => q{ cat Makefile | dup } );
+$cmd->exit_is_num(0, 'dup command exited normally');
+$cmd->stdout_is_eq($expected, 'dup did not modify stdout');
+$cmd->stderr_is_eq($expected, 'dup copied to stderr');

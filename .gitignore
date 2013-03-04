@@ -23,6 +23,7 @@ README_NEW.md
 /src/log
 /src/noop
 /src/null
+/src/dup
 /src/pipeif
 /unit-tests/check_stream_buffer
 /unit-tests/check_util

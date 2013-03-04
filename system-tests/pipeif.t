@@ -57,7 +57,7 @@ $cmd->stderr_is_eq( '', 'No error messages on stderr' );
 $cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
 
 # 10-12: Say that 100 times really fast...
-my $TEST_RUNS = 1000;
+my $TEST_RUNS = 500;
 my %errors = ( exit_val => 0, stdout_val => 0, stderr_val => 0, );
 for ( my $i = 0; $i < $TEST_RUNS; $i++ ) {
     $cmd->run();
