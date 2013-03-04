@@ -1,5 +1,6 @@
 /*
- * pipeif.c
+ * pipeif.c -- pipe part of a HTTP message if it matches certain
+ * criteria.
  *
  */
 
