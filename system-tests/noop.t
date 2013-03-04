@@ -3,6 +3,8 @@
 use warnings;
 use strict;
 
+use lib './lib', './system-tests/lib';
+
 use Test::More tests => 7;
 use Test::Command;
 
