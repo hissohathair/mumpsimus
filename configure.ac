@@ -15,6 +15,7 @@ AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_CC
 AC_PROG_CC_C99
 AX_CFLAGS_WARN_ALL
+AC_PROG_LN_S
 
 # Check for packages
 #PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
