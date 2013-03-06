@@ -154,3 +154,8 @@ Platforms missing a strlcat(3) will use Todd C Miller's strlcat
 implementation.
 
 Command behaviour is tested using Daniel Boorstein's Test::Command.
+
+Source is hosted by [Github](http://github.com/hissohathair/mumpsimus)
+
+CI provided by [Travis](https://travis-ci.org/hissohathair/mumpsimus/builds)
+[![Build Status](https://travis-ci.org/hissohathair/mumpsimus.png)](https://travis-ci.org/hissohathir/mumpsimus)

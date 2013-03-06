@@ -9,6 +9,7 @@ if [ "x$TRAVIS" = "xtrue" ] ; then
     automake --version | head -1
 
     echo "Running autoreconf to generate required build files"
+    export CFLAGS="$CFLAGS -DDEBUG"
     autoreconf -fi
 
 elif [ -f config.status ] ; then

@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
     }
 
     if ( do_writes && do_stderr_echo && br >= 1 ) {
-      ssize_t nwe = write_all(STDERR_FILENO, buf, br);
+      ssize_t nwe = 0;
+      nwe = write_all(STDERR_FILENO, buf, br);
       ulog_debug("Write %zd bytes to fd=%d (because stderr_echo ON)", nwe, STDERR_FILENO);
     }
 
