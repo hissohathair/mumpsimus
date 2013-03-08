@@ -12,7 +12,7 @@ was mispronouncing the Latin word "sumpsimus". When told of the error,
 he replied:
 
 > I will not change my old mumpsimus for your new sumpsimus
-> [Oxford](http://oxforddictionaries.com/definition/english/mumpsimus)
+> - [Oxford Dictionaries](http://oxforddictionaries.com/definition/english/mumpsimus)
 
 This Mumpsimus is a tool set for re-writing HTTP messages before they
 reach your browser or device. It will stubbornly mis-state both
