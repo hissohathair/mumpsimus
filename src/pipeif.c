@@ -4,12 +4,15 @@
  *
  */
 
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <paths.h>
+#include <semaphore.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +28,7 @@
 
 #define PIPE_HEADER 0x01
 #define PIPE_BODY 0x02
+#define SEM_NAME "pipeif-semaphore"
 
 struct pipe_settings {
   int    fd_in;
@@ -32,6 +36,7 @@ struct pipe_settings {
   int    fd_pipe;
   int    http_message_complete;
   int    pipe_parts;
+  sem_t *header_sem;
   char  *url;
   struct Stream_Buffer *sbuf;
 };
@@ -92,7 +97,15 @@ int cb_headers_complete(http_parser *parser)
   write_all(fd, str, strlen(str));
   stream_buffer(pset->sbuf, "\r\n", 2);
   stream_buffer_write(pset->sbuf, fd);
-  usleep(5000);
+  //usleep(5000);
+
+  if ( pset->header_sem != NULL ) {
+    int r = sem_post(pset->header_sem);
+    if ( r != 0 ) {
+      perror("Could not post to semaphore to say body is no OK to write");
+      ulog(LOG_ERR, "Error trying to sem_post (%s). This might get ugly.", strerror(errno));
+    }
+  }
 
   free(str);
 
@@ -155,7 +168,7 @@ int cb_body(http_parser *parser, const char *at, size_t length)
  * Want to read from stdin ---> send it to pipe's stdin.
  * Read from pipe's stdout ---> send it to my stdout.
  */
-int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
+int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe, sem_t *header_sem)
 {
   int errors = 0;
   int rc = EX_OK;
@@ -166,8 +179,9 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   pset.fd_pipe = fd_pipe;
   pset.pipe_parts = pipe_parts;
   pset.http_message_complete = 0;
+  pset.header_sem = header_sem;
   pset.url = malloc(sizeof(char) * URL_MAX);
-  pset.sbuf = stream_buffer_new(); 
+  pset.sbuf = stream_buffer_new();
   if ( NULL == pset.url || NULL == pset.sbuf ) {
     perror("Error in malloc or stream buffer");
     return -1;
@@ -204,7 +218,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
     bytes_read = read(fd_in, buffer, BUFFER_MAX);
     ulog_debug("Read %zd bytes from fd=%d", bytes_read, fd_in);
 
-    while ( bytes_read >= 0 ) {
+    while ( (bytes_read >= 0) && (errors <= 0) ) {
       last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
       ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
@@ -334,7 +348,7 @@ void usage(const char *ident, const char *message)
 {
   if ( message != NULL )
     fprintf(stderr, "error: %s\n", message);
-  fprintf(stderr, "usage: %s [-hb] -c command\n", ident);
+  fprintf(stderr, "usage: %s [-hbl] -c command\n", ident);
   exit( EX_USAGE );
 }
 
@@ -346,11 +360,12 @@ int main(int argc, char *argv[])
 {
   int rc = EX_OK;
   int piped_parts = 0;
+  int use_semaphore = 0;
   char *cmd = NULL;
 
   opterr = 0;
   int c = 0;
-  while ( (c = getopt(argc, argv, "hbc:")) != -1 ) {
+  while ( (c = getopt(argc, argv, "hblc:")) != -1 ) {
     switch ( c )
       {
       case 'h':
@@ -364,6 +379,9 @@ int main(int argc, char *argv[])
 	  usage(argv[0], "Must pass a command to -c");
 	cmd = optarg;
 	break;
+      case 'l':
+	use_semaphore = 1;
+	break;
       case '?':
 	usage(argv[0], "Unknown argument");
 	break;
@@ -376,17 +394,31 @@ int main(int argc, char *argv[])
   if ( 0 == piped_parts ) {
     usage(argv[0], "Must provide either -h or -b");
   }
+  if ( use_semaphore && !(piped_parts & PIPE_BODY) ) {
+    use_semaphore = 0;
+  }
+
+  sem_t *header_sem = NULL;
+  if ( use_semaphore ) {
+    (void)sem_unlink(SEM_NAME);
+    header_sem = sem_open(SEM_NAME, O_CREAT | O_EXCL, S_IRWXU, 0);
+    if ( SEM_FAILED == header_sem ) {
+      perror("Unable to create semaphore for locking");
+      return EX_OSERR;
+    }
+  } 
 
   ulog_init(argv[0]);
-  ulog(LOG_INFO, "Will pipe %s/%s through %s",
+  ulog(LOG_INFO, "Will pipe %s/%s through [%s] with%s",
        (piped_parts & PIPE_HEADER ? "headers" : "no headers"),
        (piped_parts & PIPE_BODY ? "body" : "no body"),
-       cmd);
+       cmd, (use_semaphore ? " locking" : "out locking"));
 
   if ( system(NULL) == 0 ) {
     perror("System shell is not available");
     return EX_OSERR;
   }
+
 
   int pipe_fds[2] = { STDIN_FILENO, STDERR_FILENO } ;
   pid_t pipe_pid = 0;
@@ -395,13 +427,15 @@ int main(int argc, char *argv[])
     rc = EX_UNAVAILABLE;
   }
   else {
-    ulog(LOG_INFO, "%s: Reading fd=%d, unfiltered out to fd=%d, filtered out to fd=%d", argv[0],
-	 STDIN_FILENO, STDOUT_FILENO, pipe_fds[1]);
-    rc = pipe_http_messages(piped_parts, STDIN_FILENO, STDOUT_FILENO, pipe_fds[1]);
+    ulog(LOG_INFO, "%s: Reading fd=%d, unfiltered out to fd=%d, filtered out to fd=%d, sem=%d", argv[0],
+	 STDIN_FILENO, STDOUT_FILENO, pipe_fds[1], header_sem);
+    rc = pipe_http_messages(piped_parts, STDIN_FILENO, STDOUT_FILENO, pipe_fds[1], header_sem);
     close_pipe(pipe_fds, pipe_pid);
   }
 
   ulog_close();
+  sem_close(header_sem);
+  sem_unlink(SEM_NAME);
 
   return rc;
 }

@@ -4,11 +4,10 @@
 #include <stdarg.h>
 #include <syslog.h>
 
+#define ulog_debug(...) ulog(LOG_DEBUG, __VA_ARGS__)
 #ifdef DEBUG
-# define ulog_debug(...) ulog(LOG_DEBUG, __VA_ARGS__)
 # define ulog_ping(x) ulog(LOG_DEBUG, "%s(%d): ping! (%s)", __FILE__, __LINE__, x)
 #else
-# define ulog_debug(...)
 # define ulog_ping(x)
 #endif
 

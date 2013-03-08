@@ -18,6 +18,7 @@
 #endif
 
 static int __logger_initialised = 0;
+static char *__ident = NULL;
 
 void ulog(int priority, const char *message, ...)
 {
@@ -28,6 +29,11 @@ void ulog(int priority, const char *message, ...)
 
   va_start(args, message);
   vsyslog(priority, message, args);
+  if ( priority <= LOG_ERR ) {
+    fprintf(stderr, "%s: error: ", __ident);
+    vfprintf(stderr, message, args);
+    fprintf(stderr, "\n");
+  }
   va_end(args);
 }
 
@@ -37,6 +43,7 @@ void ulog_close(void)
   if ( __logger_initialised )
     closelog();
   __logger_initialised = 0;
+  __ident = NULL;
   return;
 }
 
@@ -48,8 +55,9 @@ void ulog_init(const char *ident)
   if ( __logger_initialised )
     return;
 
-  /* logging PID and logging to stderr seems generally useful for now */
+  /* logging PID seems generally useful for now */
   openlog(ident, LOG_PID | LOG_PERROR, LOG_USER);
+  __ident = ident;
 
   int default_log_level = LOG_WARNING;
   if ( getenv(ULOG_ENVVAR) != NULL ) {

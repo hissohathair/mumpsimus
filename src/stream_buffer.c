@@ -73,7 +73,7 @@ size_t stream_buffer(struct Stream_Buffer *buf, const char *nbuff, const size_t 
     }
   }
 
-  ulog_debug("Appending %ld bytes to end of buffer at %X (current size=%ld)", length, buf->head, buf->curr_size);
+  //ulog_debug("Appending %ld bytes to end of buffer at %X (current size=%ld)", length, buf->head, buf->curr_size);
   memcpy(buf->tail, nbuff, length);
   buf->tail += length;
   buf->curr_size += length;  

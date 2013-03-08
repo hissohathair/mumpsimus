@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 12;
+use Test::Command tests => 21;
 use Test::More;
 
 BEGIN {
@@ -43,34 +43,48 @@ $expected =~ s/^DNT: 1/DNT: banana/gm;
 $cmd->stdout_is_eq( $expected, 'Rest of headers were preserved OK' );
 
 # 4-6: Body transformation (with noop -- so no change really). Mainly making sure header/body order preserved
-$cmd = Test::Command->new( cmd => q{pipeif -b -c noop < } . $BODY_TEST_FILE );
+$cmd = Test::Command->new( cmd => q{pipeif -l -b -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
-$cmd->exit_is_num( 0, 'No-op test exited normally' );
-$cmd->stderr_is_eq( '', 'No error messages on stderr' );
-$cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
+stress_test($cmd, "Body Test", $expected);
 
-# 7-9: Body transformation (again with noop), this time send headers through pipe
-$cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $BODY_TEST_FILE );
+# 10-12: Header transformation (again with noop), this time send headers through pipe
+$cmd = Test::Command->new( cmd => q{pipeif -l -h -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
-$cmd->exit_is_num( 0, 'No-op test exited normally' );
-$cmd->stderr_is_eq( '', 'No error messages on stderr' );
-$cmd->stdout_is_eq( $expected, 'Piping through noop was genuine no-op' );
+stress_test($cmd, "Head Test", $expected);
 
-# 10-12: Say that 100 times really fast...
-my $TEST_RUNS = 500;
-my %errors = ( exit_val => 0, stdout_val => 0, stderr_val => 0, );
-for ( my $i = 0; $i < $TEST_RUNS; $i++ ) {
-    $cmd->run();
-    $errors{exit_val}++   if ( $cmd->exit_value != 0 );
-    $errors{stderr_val}++ if ( $cmd->stderr_value ne '' );
-    $errors{stdout_val}++ if ( $cmd->stdout_value ne $expected );
-}
-is( 0, $errors{exit_val},   "Exited without error (repeated $TEST_RUNS times without errors)" );
-is( 0, $errors{stderr_val}, "No error messages on stderr (repeated $TEST_RUNS times without errors)" );
-is( 0, $errors{stdout_val}, "Piping through noop was genuine no-op repeated $TEST_RUNS times without errors)" );
+# 16-18: Header AND body transformation (again with noop), this time send headers through pipe
+$cmd = Test::Command->new( cmd => q{pipeif -hb -c noop < } . $BODY_TEST_FILE );
+$expected = `cat $BODY_TEST_FILE`;
+stress_test($cmd, "Head+Body Test", $expected);
 
 ### TODO: Under Construction -- expected to fail
 $cmd->builder->todo_start( 'Under construction' );
 $cmd->builder->todo_end();
 ### END TODO
 
+
+sub stress_test
+{
+    my ($cmd, $label, $expected) = @_;
+    my $max_test_runs = 100;
+
+    # Smoke test
+    $cmd->run();
+    $cmd->exit_is_num( 0,   "$label: no-op test exited normally" );
+    $cmd->stderr_is_eq( '', "$label: no error messages on stderr" );
+    $cmd->stdout_is_eq( $expected, "$label: noop was genuine no-op" );
+
+    # Stress test
+    my %errors = ( exit_val => 0, stdout_val => 0, stderr_val => 0, );
+    for ( my $i = 0; $i < $max_test_runs; $i++ ) {
+	$cmd->run();
+	$errors{exit_val}++   if ( $cmd->exit_value != 0 );
+	$errors{stderr_val}++ if ( $cmd->stderr_value ne '' );
+	$errors{stdout_val}++ if ( $cmd->stdout_value ne $expected );
+    }
+    is( $errors{exit_val},   0, "$label: command exited normally $max_test_runs times" );
+    is( $errors{stderr_val}, 0, "$label: command generated 0 errors $max_test_runs times" );
+    is( $errors{stdout_val}, 0, "$label: output unmolested correctly $max_test_runs times" );
+
+    return;
+}
