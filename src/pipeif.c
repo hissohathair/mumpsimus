@@ -92,7 +92,7 @@ int cb_headers_complete(http_parser *parser)
   write_all(fd, str, strlen(str));
   stream_buffer(pset->sbuf, "\r\n", 2);
   stream_buffer_write(pset->sbuf, fd);
-  usleep(5000);
+  usleep(7000);
 
   free(str);
 
@@ -204,7 +204,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
     bytes_read = read(fd_in, buffer, BUFFER_MAX);
     ulog_debug("Read %zd bytes from fd=%d", bytes_read, fd_in);
 
-    while ( bytes_read >= 0 ) {
+    while ( (bytes_read >= 0) && (errors <= 0) ) {
       last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
       ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 

@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 21;
+use Test::Command tests => 27;
 use Test::More;
 
 BEGIN {
@@ -42,23 +42,29 @@ my $expected = `cat $HEAD_TEST_FILE`;
 $expected =~ s/^DNT: 1/DNT: banana/gm; 
 $cmd->stdout_is_eq( $expected, 'Rest of headers were preserved OK' );
 
-# 4-6: Body transformation (with noop -- so no change really). Mainly making sure header/body order preserved
+# 4-9: Body transformation (with noop -- so no change really). Mainly making sure header/body order preserved
 $cmd = Test::Command->new( cmd => q{pipeif -b -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Body Test", $expected);
 
-# 10-12: Header transformation (again with noop), this time send headers through pipe
+# 10-15: Header transformation (again with noop), this time send headers through pipe
 $cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Head Test", $expected);
 
-# 16-18: Header AND body transformation (again with noop), this time send headers through pipe
+# 16-21: Header AND body transformation (again with noop), this time send headers through pipe
 $cmd = Test::Command->new( cmd => q{pipeif -hb -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Head+Body Test", $expected);
 
 ### TODO: Under Construction -- expected to fail
 $cmd->builder->todo_start( 'Under construction' );
+
+# 22-27: A request, then a response should be OK
+$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | pipeif -b -c noop } );
+$expected = `cat @TEST_FILES`;
+stress_test($cmd, 'Request+Response & Body Filter', $expected);
+
 $cmd->builder->todo_end();
 ### END TODO
 
@@ -84,7 +90,7 @@ sub stress_test
     }
     is( $errors{exit_val},   0, "$label: command exited normally $max_test_runs times" );
     is( $errors{stderr_val}, 0, "$label: command generated 0 errors $max_test_runs times" );
-    is( $errors{stdout_val}, 0, "$label: output unmolested correctly $max_test_runs times" );
+    is( $errors{stdout_val}, 0, "$label: output uncorrupted correctly $max_test_runs times" );
 
     return;
 }
