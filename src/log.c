@@ -37,6 +37,20 @@ void usage(const char *ident)
 
 
 
+void log_highlight(FILE *outf, const int turn_highlight_on)
+{
+  if ( getenv("TERM") == NULL )
+    return;
+  if ( strstr(getenv("TERM"), "color") == NULL )
+    return;
+
+  if ( turn_highlight_on )
+    fprintf(outf, "%c[1;32m", 27);
+  else
+    fprintf(outf, "%c[0m", 27);
+}
+
+
 /*
  * cb_log_message_complete: Callback from http_parser, called when all
  * headers have been processed. A good time to extract some relevant
@@ -67,9 +81,12 @@ int cb_log_message_complete(http_parser *parser) {
 	     (ssize_t)(parser->nread + parser->content_length));
   }
 
-  if ( __volume > 0 )
+  ulog(LOG_INFO, "cb_log_message_complete: %s", str);
+  if ( __volume > 0 ) {
+    log_highlight(stderr, 1);
     fprintf(stderr, "%s: %s\n", __FILE__, str);
-  ulog(LOG_INFO, "%s", str);
+    log_highlight(stderr, 0);
+  }
 
   if ( __volume > 1 )
     fprintf(stderr, "%s: [begin headers]\n%s%s: [end headers]\n", __FILE__, __headers, __FILE__);
@@ -118,6 +135,12 @@ int cb_log_header_value(http_parser *parser, const char *at, size_t length)
   return 0;
 }
 
+int cb_log_body(http_parser *parser, const char *at, size_t length)
+{
+  ulog_debug("cb_log_body called (len=%zd)", length);
+  return 0;
+}
+
 
 /* 
  * pass_http_messages: Reading from fd_in, echo bytes to fd_out
@@ -133,6 +156,7 @@ int pass_http_messages(int fd_in, int fd_out)
   init_http_parser_settings(&settings);
   settings.on_url              = cb_log_url;
   settings.on_message_complete = cb_log_message_complete;
+  settings.on_body             = cb_log_body;
   if ( __volume > 1 ) {
     settings.on_header_field   = cb_log_header_field;
     settings.on_header_value   = cb_log_header_value;
@@ -180,17 +204,18 @@ int pass_http_messages(int fd_in, int fd_out)
        */
       ssize_t total_parsed = 0;
       ssize_t last_parsed  = 0;
-      int max_loops = 5;
       do {
-	ulog(LOG_DEBUG, "About to parse from offset %zd, where char=%c (%d)\n",
-	     total_parsed, buffer[total_parsed], buffer[total_parsed]);
-
+	ulog(LOG_DEBUG, "About to parse from offset %zd, where next char's are =(%d,%d,%d = %c%c%c)\n", 
+	     total_parsed, 
+	     buffer[total_parsed], buffer[total_parsed+1], buffer[total_parsed+2], 
+	     buffer[total_parsed], buffer[total_parsed+1], buffer[total_parsed+2]);
 	last_parsed = http_parser_execute(parser, &settings, buffer + total_parsed, bytes_read - total_parsed);
 
-	ulog(LOG_DEBUG, "Parsed %zd bytes from %zd (total now %zd; %zd remains)\n",
+	ulog(LOG_DEBUG, "Parsed %zd bytes from %zd (total now %zd; %zd remains; target = %zd)\n",
 	     last_parsed, bytes_read, 
 	     total_parsed + last_parsed,
-	     bytes_read - total_parsed - last_parsed);
+	     bytes_read - total_parsed - last_parsed,
+	     (total_parsed + last_parsed) + (bytes_read - total_parsed - last_parsed));
 
 	if ( last_parsed < 0 ) {
 	  perror("Error reading HTTP message stream");
@@ -199,9 +224,18 @@ int pass_http_messages(int fd_in, int fd_out)
 	}
 	else {
 	  total_parsed += last_parsed;
-	  /* BUG: so this is interesting, http_parser seems to over-consume by one byte in concat messages. L1677 */
-	  if ( total_parsed < bytes_read )
+	  /* 
+	   * BUG: so this is interesting, http_parser seems to over-consume by one byte in concat messages.
+	   * See http_parser.c, tag [HISSO].
+	   */
+	  ulog_debug("Adjustment check: total_parsed now = %zd; bytes_read = %zd; bheb=%d; next char = %d (%c)", 
+		     total_parsed, bytes_read, parser->body_had_extra_byte,
+		     buffer[total_parsed], buffer[total_parsed]);
+	  if ( (total_parsed < bytes_read) && (parser->body_had_extra_byte == 0) )
 	    total_parsed--;
+	  ulog_debug("Adjustment now: total_parsed now = %zd; bytes_read = %zd; bheb=%d; next char = %d (%c)", 
+		     total_parsed, bytes_read, parser->body_had_extra_byte,
+		     buffer[total_parsed], buffer[total_parsed]);
 	}
 
 	/* 
@@ -214,7 +248,9 @@ int pass_http_messages(int fd_in, int fd_out)
 	  __http_message_complete = 0;
 	}
 
-      } while ( (total_parsed < bytes_read) && (last_parsed >= 0) && (errors <= 0) && (--max_loops > 0));
+      } while ( (total_parsed < bytes_read) && (last_parsed >= 0) && (errors <= 0) );
+      ulog_debug("Exit state: total_parsed=%zd; bytes_read=%zd; last_parsed=%zd; errors=%d.",
+		 total_parsed, bytes_read, last_parsed, errors);
     }
     else if ( bytes_read < 0 ) {
       perror("Error reading data");

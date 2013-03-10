@@ -206,6 +206,7 @@ struct http_parser {
   unsigned short status_code; /* responses only */
   unsigned char method;       /* requests only */
   unsigned char http_errno : 7;
+  unsigned short body_had_extra_byte;
 
   /* 1 = Upgrade header was present and the parser has exited because of that.
    * 0 = No upgrade header present.

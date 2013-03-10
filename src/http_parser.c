@@ -1704,7 +1704,11 @@ size_t http_parser_execute (http_parser *parser,
            * harness to distinguish between complete-on-EOF and
            * complete-on-length. It's not clear that this distinction is
            * important for applications, but let's keep it for now.
+	   * 
+	   * [HISSO]: Compare log.c BUG note.
            */
+	  parser->body_had_extra_byte = 1;
+	  //fprintf(stderr, "%c[1;31m%s(%d): CALLBACK_DATA with extra byte %c[0m\n", 27, __FILE__, __LINE__, 27);
           CALLBACK_DATA_(body, p - body_mark + 1, p - data);
           goto reexecute_byte;
         }
@@ -1832,6 +1836,7 @@ size_t http_parser_execute (http_parser *parser,
         assert(parser->content_length == 0);
         STRICT_CHECK(ch != CR);
         parser->state = s_chunk_data_done;
+	//fprintf(stderr, "%c[1;31m%s(%d): CALLBACK_DATA on body %c[0m\n", 27, __FILE__, __LINE__, 27);
         CALLBACK_DATA(body);
         break;
 
@@ -1943,6 +1948,7 @@ http_parser_init (http_parser *parser, enum http_parser_type t)
   parser->state = (t == HTTP_REQUEST ? s_start_req : (t == HTTP_RESPONSE ? s_start_res : s_start_req_or_res));
   parser->http_errno = HPE_OK;
   parser->nread = 0;
+  parser->body_had_extra_byte = 0;
 }
 
 const char *

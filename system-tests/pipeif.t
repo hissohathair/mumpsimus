@@ -66,7 +66,7 @@ $cmd->builder->todo_end();
 sub stress_test
 {
     my ($cmd, $label, $expected) = @_;
-    my $max_test_runs = 100;
+    my $max_test_runs = 10;
 
     # Smoke test
     $cmd->run();
