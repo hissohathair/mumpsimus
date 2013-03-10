@@ -99,6 +99,13 @@ int cb_headers_complete(http_parser *parser)
   return 0;
 }
 
+__http_message_complete = 0;
+int cb_message_complete(http_parser *parser)
+{
+  __http_message_complete = 1;
+  return 0;
+}
+
 int cb_status_complete(http_parser *parser, const char *at, size_t length)
 {
   struct pipe_settings *pset = (struct pipe_settings*)parser->data;
@@ -180,6 +187,7 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   settings.on_header_value = cb_header_value;
   settings.on_headers_complete = cb_headers_complete;
   settings.on_status_complete = cb_status_complete;
+  settings.on_message_complete = cb_message_complete;
   settings.on_url = cb_url;
   settings.on_body = cb_body;
 
@@ -206,6 +214,9 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
 
     while ( (bytes_read >= 0) && (errors <= 0) ) {
       last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
+      if ( (last_parsed < bytes_read) && (parser.body_had_extra_byte == 0) )
+	  last_parsed--;
+
       ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
       if ( 0 == bytes_read ) {
@@ -214,11 +225,21 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
       }
       else if ( last_parsed > 0 ) {
 	bytes_read -= last_parsed;
-	buf_ptr    += last_parsed - 1;
+	buf_ptr    += last_parsed;
       }
       else {
 	errors++;
 	ulog(LOG_ERR, "Parser error reading HTTP stream");
+      }
+
+      /* 
+       * During that last call a complete message may have been read, which set a global
+       * (TODO: remove global). Need to check this and restart the parser if that happened.
+       */
+      if ( 1 == __http_message_complete ) {
+	ulog(LOG_DEBUG, "Complete message detected. Resetting parser.");
+	http_parser_init(&parser, HTTP_BOTH);
+	__http_message_complete = 0;
       }
     }
     ulog_debug("Inner parser loop exited (bytes_read=%zd; errors=%d)", bytes_read, errors);

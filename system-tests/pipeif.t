@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 27;
+use Test::Command tests => 33;
 use Test::More;
 
 BEGIN {
@@ -57,13 +57,20 @@ $cmd = Test::Command->new( cmd => q{pipeif -hb -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Head+Body Test", $expected);
 
-### TODO: Under Construction -- expected to fail
-$cmd->builder->todo_start( 'Under construction' );
-
 # 22-27: A request, then a response should be OK
 $cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | pipeif -b -c noop } );
 $expected = `cat @TEST_FILES`;
 stress_test($cmd, 'Request+Response & Body Filter', $expected);
+
+### TODO: Under Construction -- expected to fail
+$cmd->builder->todo_start( 'Under construction' );
+
+# 28-33: Double that now
+my @MORE_TESTS = (@TEST_FILES, @TEST_FILES);
+$cmd = Test::Command->new( cmd => qq{ cat @MORE_TESTS | pipeif -b -c noop } );
+$expected = `cat @MORE_TESTS`;
+stress_test($cmd, 'Request+Response & Body Filter x 4', $expected);
+
 
 $cmd->builder->todo_end();
 ### END TODO
