@@ -36,7 +36,7 @@ The toolset is designed to work as a set of UNIX command-line programs
 that will co-operate using *UNIX pipes*. The basic idea is to feed in
 HTTP messages (requests or responses) via *stdin*, and have the
 (potentially) modified output printed on *stdout*. This in turn can be
-fed to another commnad and so on.
+fed to another command and so on.
 
 Here's a simple example:
 
@@ -142,6 +142,8 @@ OpenIndiana).
 The test suite at the moment is written in Perl, and we'll need a
 fairly modern version of that (at least 5.12) because of the test
 harness being used.
+
+Unit tests are done using the [Check Unit Testing Framework](http://check.sourceforge.net/).
 
 
 Acknowledgements
