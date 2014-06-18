@@ -1,4 +1,9 @@
 #!/usr/bin/env perl
+#
+# log.t:
+#
+#   System tests for the log command.
+#
 
 use warnings;
 use strict;
@@ -15,6 +20,7 @@ BEGIN {
 }
 
 
+# Generate full paths to test files
 my @TEST_FILES = ( 'sample-request-get.txt', 'sample-response-302.txt' );
 my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
 for ( my $i = 0; $i <= $#TEST_FILES; $i++ ) {
@@ -57,7 +63,7 @@ is( $#stderr_lines+1, $#TEST_FILES+1, '1 log message for each http message gener
 # 16-17: BUG -- zero bytes being reported
 $cmd = Test::Command->new( cmd => 'log < ' . $TEST_FILES[0] );
 $cmd->stderr_is_eq( "log.c: [req] GET http://www.google.com/ HTTP/1.1 (527 bytes)\n", 'Counted 527 bytes correctly' );
-my $expected_stderr = $cmd->stderr_value . 2;
+my $expected_stderr = $cmd->stderr_value x 2;
 $cmd = Test::Command->new( cmd => qq{ cat $TEST_FILES[0] $TEST_FILES[0] | log } );
 $cmd->builder->todo_start('Known bug in byte count');
 $cmd->stderr_is_eq( $expected_stderr, 'Processing two GETs in a row had same byte count' );

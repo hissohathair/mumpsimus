@@ -99,7 +99,7 @@ int cb_headers_complete(http_parser *parser)
   return 0;
 }
 
-__http_message_complete = 0;
+static int __http_message_complete = 0;
 int cb_message_complete(http_parser *parser)
 {
   __http_message_complete = 1;
@@ -214,9 +214,6 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
 
     while ( (bytes_read >= 0) && (errors <= 0) ) {
       last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
-      if ( (last_parsed < bytes_read) && (parser.body_had_extra_byte == 0) )
-	  last_parsed--;
-
       ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
       if ( 0 == bytes_read ) {
@@ -224,8 +221,12 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
 	bytes_read = -1;
       }
       else if ( last_parsed > 0 ) {
+	if ( (last_parsed < bytes_read) && (parser.body_had_extra_byte == 0) )
+	  last_parsed--;
+
 	bytes_read -= last_parsed;
 	buf_ptr    += last_parsed;
+
       }
       else {
 	errors++;

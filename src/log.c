@@ -1,5 +1,6 @@
 /*
- * log.c -- print out features of a HTTP stream on stderr.
+ * log.c -- print out features of a HTTP stream from stdin and report
+ * on stderr.
  *
  * Not working yet. :)
  */
@@ -36,7 +37,10 @@ void usage(const char *ident)
 }
 
 
-
+/*
+ * log_highlight: Print terminal escape sequence to turn colour on and
+ * off.
+ */
 void log_highlight(FILE *outf, const int turn_highlight_on)
 {
   if ( getenv("TERM") == NULL )
@@ -44,6 +48,7 @@ void log_highlight(FILE *outf, const int turn_highlight_on)
   if ( strstr(getenv("TERM"), "color") == NULL )
     return;
 
+  /* TODO: ummm... there's a termcap library for this... */
   if ( turn_highlight_on )
     fprintf(outf, "%c[1;32m", 27);
   else
@@ -56,8 +61,8 @@ void log_highlight(FILE *outf, const int turn_highlight_on)
  * headers have been processed. A good time to extract some relevant
  * log information.
  */
-int cb_log_message_complete(http_parser *parser) {
-
+int cb_log_message_complete(http_parser *parser) 
+{
   char *str = malloc(sizeof(char) * BUFFER_MAX);
   if ( NULL == str ) {
     perror("Unable to malloc for logging");
@@ -116,6 +121,10 @@ int cb_log_url(http_parser *parser, const char *at, size_t length)
   return 0;
 }
 
+/*
+ * cb_log_header_field: Called from http_parser, when a header field
+ * has been read. Adds this to our own buffer for later logging.
+ */
 int cb_log_header_field(http_parser *parser, const char *at, size_t length) 
 {
   char *new_field = strndup(at, length);
@@ -126,6 +135,10 @@ int cb_log_header_field(http_parser *parser, const char *at, size_t length)
   return 0;
 }
 
+/*
+ * cb_log_header_value: Called from http_parser, when a header field's
+ * value has been read. Adds this to our own buffer for later logging.
+ */
 int cb_log_header_value(http_parser *parser, const char *at, size_t length) 
 {
   char *new_value = strndup(at, length);
@@ -209,6 +222,7 @@ int pass_http_messages(int fd_in, int fd_out)
 	     total_parsed, 
 	     buffer[total_parsed], buffer[total_parsed+1], buffer[total_parsed+2], 
 	     buffer[total_parsed], buffer[total_parsed+1], buffer[total_parsed+2]);
+
 	last_parsed = http_parser_execute(parser, &settings, buffer + total_parsed, bytes_read - total_parsed);
 
 	ulog(LOG_DEBUG, "Parsed %zd bytes from %zd (total now %zd; %zd remains; target = %zd)\n",
@@ -245,6 +259,8 @@ int pass_http_messages(int fd_in, int fd_out)
 	if ( 1 == __http_message_complete ) {
 	  ulog(LOG_DEBUG, "Complete message detected. Resetting parser.");
 	  http_parser_init(parser, HTTP_BOTH);
+	  parser->nread = 0;
+	  parser->content_length = 0;
 	  __http_message_complete = 0;
 	}
 

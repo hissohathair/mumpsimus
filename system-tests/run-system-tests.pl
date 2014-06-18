@@ -1,15 +1,36 @@
 #!/usr/bin/env perl
 #
+# usage:
+#   $ run-system-tests.pl [test_file.t [test_file2.t [test_fileN.t ...]]]
+#
+# run-system-tests.pl: 
+#
+#   Test harness for system testing. With no arguments, will run all
+#   the tests to run a specific test file (or files) list them on the
+#   command line.
+#
+#   If the 'prove' command is detected it will be used to run the
+#   tests.  Otherwise we call Perl directly.
+#
 
 use warnings;
 use strict;
 
+
+# Check command line for arguments. If there are none, add all *.t
+# files.
+#
 my @TESTS = @ARGV;
 if ( $#TESTS < 0 ) {
     push @TESTS, "./system-tests/*.t" if ( -d './system-tests' );
     push @TESTS, '*.t' if ( -f 'noop.t' );
 }
 
+
+# Return code ($rc) will be the exit code of the called
+# program. Non-zero indicates failed tests, which we need to
+# propogate.
+#
 my $rc = 0;
 if ( &prove_exists() ) {
     $rc = system_check("prove @TESTS");
@@ -23,6 +44,10 @@ else {
 exit($rc);
 
 
+# prove_exists:
+#
+#    Return true if the command 'prove' is found.
+#
 sub prove_exists 
 {
     my @path_elts = split /:/, $ENV{PATH};    # :/; emacs you can't parse for shit'
@@ -37,6 +62,11 @@ sub prove_exists
 }
 
 
+# system_check :
+#
+#   Call the system(2) function, check for abnormal terminations, and
+#   return the correct exit code of the child program.
+#
 sub system_check
 {
     my $rc = system( @_ );
