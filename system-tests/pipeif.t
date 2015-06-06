@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 33;
+use Test::Command tests => 34;
 use Test::More;
 
 BEGIN {
@@ -13,18 +13,22 @@ BEGIN {
     $ENV{ULOG_LEVEL} = 4;
 }
 
+my $HEAD_TEST_FILE = 'sample-request-get.txt';
+my $BODY_TEST_FILE = 'sample-response-302.txt';
 
-my @TEST_FILES = ( 'sample-request-get.txt', 'sample-response-302.txt' );
+my @TEST_FILES = ( $HEAD_TEST_FILE, $BODY_TEST_FILE );
 my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
 for ( my $i = 0; $i <= $#TEST_FILES; $i++ ) {
     my $path = `find @SEARCH_DIR -name $TEST_FILES[$i] 2>/dev/null`;
     chomp($path);
-    #diag("Test file $i at $path");
+    diag("Test file $i at $path");
     $TEST_FILES[$i] = $path if ( $path );
 }
 
-my $HEAD_TEST_FILE = $TEST_FILES[0];
-my $BODY_TEST_FILE = $TEST_FILES[1];
+# Because TEST_FILES array now has relative paths sewn in
+$HEAD_TEST_FILE = $TEST_FILES[0];
+$BODY_TEST_FILE = $TEST_FILES[1];
+
 
 # 1-2: Header transformation test (test file has header only)
 my $cmd = Test::Command->new( cmd => q{pipeif -h -c "sed -e 's/^DNT: 1/DNT: banana/'" < } . $HEAD_TEST_FILE  );
@@ -47,6 +51,7 @@ $cmd = Test::Command->new( cmd => q{pipeif -b -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Body Test", $expected);
 
+
 # 10-15: Header transformation (again with noop), this time send headers through pipe
 $cmd = Test::Command->new( cmd => q{pipeif -h -c noop < } . $BODY_TEST_FILE );
 $expected = `cat $BODY_TEST_FILE`;
@@ -58,17 +63,24 @@ $expected = `cat $BODY_TEST_FILE`;
 stress_test($cmd, "Head+Body Test", $expected);
 
 # 22-27: A request, then a response should be OK
+diag("Test files: " . join('; ', @TEST_FILES));
 $cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | pipeif -b -c noop } );
 $expected = `cat @TEST_FILES`;
 stress_test($cmd, 'Request+Response & Body Filter', $expected);
 
+
+
 ### TODO: Under Construction -- expected to fail
 $cmd->builder->todo_start( 'Under construction' );
 
-# 28-33: Double that now
+# 28: Double that now
 my @MORE_TESTS = (@TEST_FILES, @TEST_FILES);
 $cmd = Test::Command->new( cmd => qq{ cat @MORE_TESTS | pipeif -b -c noop } );
 $expected = `cat @MORE_TESTS`;
+$cmd->stdout_is_eq( $expected, "Running with 4 messages in a row OK" );
+
+
+# 29-34: Stress test
 stress_test($cmd, 'Request+Response & Body Filter x 4', $expected);
 
 

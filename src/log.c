@@ -166,7 +166,7 @@ int pass_http_messages(int fd_in, int fd_out)
   int errors = 0;
 
   http_parser_settings settings;
-  init_http_parser_settings(&settings);
+  http_parser_settings_init(&settings);
   settings.on_url              = cb_log_url;
   settings.on_message_complete = cb_log_message_complete;
   settings.on_body             = cb_log_body;

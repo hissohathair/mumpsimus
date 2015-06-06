@@ -30,8 +30,8 @@ struct pipe_settings {
   int    fd_in;
   int    fd_out;
   int    fd_pipe;
-  int    http_message_complete;
   int    pipe_parts;
+  char  *cmd;
   char  *url;
   struct Stream_Buffer *sbuf;
 };
@@ -70,7 +70,7 @@ int cb_headers_complete(http_parser *parser)
   }
 
   /* builds the correct log message */
-  if ( 0 == parser->type ) {
+  if ( HTTP_REQUEST == parser->type ) {
     snprintf(str, BUFFER_MAX, "%s %s HTTP/%d.%d\r\n",
 	     http_method_str(parser->method), 
 	     pset->url,
@@ -78,31 +78,52 @@ int cb_headers_complete(http_parser *parser)
 	     parser->http_minor);
   }
   else {
-    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %s\r\n",
+    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
 	     parser->http_major, 
 	     parser->http_minor, 
+	     parser->status_code,
 	     pset->url);
   }
 
   int fd = pset->fd_out;
   if ( pset->pipe_parts & PIPE_HEADER )
     fd = pset->fd_pipe;
-  ulog_debug("cb_headers_complete(parser=%X) -> fd=%d", parser, fd);
+  ulog_debug("cb_headers_complete(parser=%X, parser->type=%d) -> fd=%d", parser, parser->type, fd);
 
   write_all(fd, str, strlen(str));
   stream_buffer(pset->sbuf, "\r\n", 2);
   stream_buffer_write(pset->sbuf, fd);
   usleep(7000);
-
   free(str);
+
+
+  /*
+   * So if we've been piping the header (but not the body) then we should close and re-open
+   * the pipe, so that all buffers are flushed and the output comes out in the correct order.
+   */
+  if ( pset->pipe_parts & PIPE_HEADER ) {
+    // TODO
+  }
 
   return 0;
 }
 
-static int __http_message_complete = 0;
 int cb_message_complete(http_parser *parser)
 {
-  __http_message_complete = 1;
+  struct pipe_settings *pset = (struct pipe_settings*)parser->data;
+
+  ulog_debug("HTTP message complete");
+  http_parser_init(parser, HTTP_BOTH);
+
+
+  /*
+   * If we've been piping the body (but not the header) then we should close and re-open
+   * the pipe again, so that all buffers are flushed.
+   */
+  if ( pset->pipe_parts & PIPE_BODY ) {
+    // TODO
+  }
+
   return 0;
 }
 
@@ -162,7 +183,7 @@ int cb_body(http_parser *parser, const char *at, size_t length)
  * Want to read from stdin ---> send it to pipe's stdin.
  * Read from pipe's stdout ---> send it to my stdout.
  */
-int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
+int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe, const char *cmd)
 {
   int errors = 0;
   int rc = EX_OK;
@@ -172,8 +193,8 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   pset.fd_out = fd_out;
   pset.fd_pipe = fd_pipe;
   pset.pipe_parts = pipe_parts;
-  pset.http_message_complete = 0;
   pset.url = malloc(sizeof(char) * URL_MAX);
+  pset.cmd = (char*)cmd;
   pset.sbuf = stream_buffer_new(); 
   if ( NULL == pset.url || NULL == pset.sbuf ) {
     perror("Error in malloc or stream buffer");
@@ -182,11 +203,11 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
   pset.url[0] = '\0';
 
   http_parser_settings settings;
-  init_http_parser_settings(&settings);
+  http_parser_settings_init(&settings);
   settings.on_header_field = cb_header_field;
   settings.on_header_value = cb_header_value;
   settings.on_headers_complete = cb_headers_complete;
-  settings.on_status_complete = cb_status_complete;
+  settings.on_status = cb_status_complete;
   settings.on_message_complete = cb_message_complete;
   settings.on_url = cb_url;
   settings.on_body = cb_body;
@@ -221,6 +242,8 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
 	bytes_read = -1;
       }
       else if ( last_parsed > 0 ) {
+	ulog(LOG_DEBUG, "I parsed SOMETHING dammit! (last_parsed=%d; bytes_read=%d; body_had_extra_byte=%d)", 
+	     last_parsed, bytes_read, parser.body_had_extra_byte);
 	if ( (last_parsed < bytes_read) && (parser.body_had_extra_byte == 0) )
 	  last_parsed--;
 
@@ -230,18 +253,12 @@ int pipe_http_messages(const int pipe_parts, int fd_in, int fd_out, int fd_pipe)
       }
       else {
 	errors++;
-	ulog(LOG_ERR, "Parser error reading HTTP stream");
+	ulog(LOG_ERR, "Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)", parser.type,
+	     http_errno_description(HTTP_PARSER_ERRNO(&parser)),
+	     http_errno_name(HTTP_PARSER_ERRNO(&parser)),
+	     *buf_ptr, *buf_ptr);
       }
 
-      /* 
-       * During that last call a complete message may have been read, which set a global
-       * (TODO: remove global). Need to check this and restart the parser if that happened.
-       */
-      if ( 1 == __http_message_complete ) {
-	ulog(LOG_DEBUG, "Complete message detected. Resetting parser.");
-	http_parser_init(&parser, HTTP_BOTH);
-	__http_message_complete = 0;
-      }
     }
     ulog_debug("Inner parser loop exited (bytes_read=%zd; errors=%d)", bytes_read, errors);
 
@@ -349,6 +366,7 @@ void close_pipe(int fds[2], pid_t pid)
 }
 
 
+
 /*
  * usage: Command usage and abort.
  */
@@ -395,15 +413,16 @@ int main(int argc, char *argv[])
   if ( NULL == cmd ) {
     usage(argv[0], "Must provide a command to pipe through with -c <command>");
   }
-  if ( 0 == piped_parts ) {
-    usage(argv[0], "Must provide either -h or -b");
-  }
 
   ulog_init(argv[0]);
-  ulog(LOG_INFO, "Will pipe %s/%s through %s",
+  ulog(LOG_INFO, "Will pipe %s / %s through %s",
        (piped_parts & PIPE_HEADER ? "headers" : "no headers"),
        (piped_parts & PIPE_BODY ? "body" : "no body"),
        cmd);
+
+  if ( 0 == piped_parts ) {
+    ulog(LOG_WARNING, "pipeif has been called without either -h or -b");
+  }
 
   if ( system(NULL) == 0 ) {
     perror("System shell is not available");
@@ -419,7 +438,7 @@ int main(int argc, char *argv[])
   else {
     ulog(LOG_INFO, "%s: Reading fd=%d, unfiltered out to fd=%d, filtered out to fd=%d", argv[0],
 	 STDIN_FILENO, STDOUT_FILENO, pipe_fds[1]);
-    rc = pipe_http_messages(piped_parts, STDIN_FILENO, STDOUT_FILENO, pipe_fds[1]);
+    rc = pipe_http_messages(piped_parts, STDIN_FILENO, STDOUT_FILENO, pipe_fds[1], cmd);
     close_pipe(pipe_fds, pipe_pid);
   }
 
