@@ -24,7 +24,8 @@ README_NEW.md
 /src/noop
 /src/null
 /src/dup
-/src/pipeif
+/src/headers
+/src/headers.OLD.c
 /unit-tests/check_stream_buffer
 /unit-tests/check_util
 
