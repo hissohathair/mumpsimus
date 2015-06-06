@@ -12,11 +12,16 @@
 #include "pipes.h"
 #include "ulog.h"
 
+
+/* pipe_handle_init:
+ *
+ *    Initialise the pipe handle structure.
+ */
 void pipe_handle_init(struct Pipe_Handle *ph)
 {
   ph->pipe_status = 0; // closed
   ph->pipe_fds[0] = STDIN_FILENO;
-  ph->pipe_fds[1] = STDERR_FILENO;
+  ph->pipe_fds[1] = STDERR_FILENO; // TODO: why?
   ph->pipe_pid = 0;
   ph->pipe_cmd = NULL;
   return;
@@ -103,6 +108,7 @@ int pipe_open(struct Pipe_Handle *ph, const char *pipe_cmd)
 }
 
 
+
 /* pipe_close:
  *
  *    Closes the pipe which is expected to terminate the piped
@@ -110,6 +116,8 @@ int pipe_open(struct Pipe_Handle *ph, const char *pipe_cmd)
  */
 int pipe_close(struct Pipe_Handle *ph)
 {
+  assert(ph->pipe_status == 1);
+
   // Close pipe handles 
   close(ph->pipe_fds[0]); // TODO: was already closed though?
   close(ph->pipe_fds[1]);
@@ -141,9 +149,44 @@ int pipe_close(struct Pipe_Handle *ph)
   return 0;
 }
 
+
+/* pipe_stdout:
+ *
+ *    Returns the file handle number for the pipe's stdout.
+ */
 int pipe_fileno(struct Pipe_Handle *ph)
 {
+  assert(ph->pipe_status == 1);
   return ph->pipe_fds[1];
 }
 
 
+/* pipe_reset:
+ *
+ *    Closes the pipe, which is expected to cause the child to
+ *    terminate and flush all its output buffers. Then re-opens
+ *    the pipe.
+ */
+int pipe_reset(struct Pipe_Handle *ph)
+{
+  int rc = 0;
+  assert(ph->pipe_status == 1);
+
+
+  rc = pipe_close(ph);
+  if ( rc != 0 ) {
+    ulog(LOG_ERR, "Was not able to reset pipe because pipe close failed");
+    return rc;
+  }
+
+  rc = pipe_open(ph, ph->pipe_cmd);
+  if ( rc != 0 ) {
+    ulog(LOG_ERR, "Was not able to reset pipe because could not reopen: %s", ph->pipe_cmd);
+    return rc;
+  }
+
+  ulog_debug("Reset pipe command: %s", ph->pipe_cmd);
+
+  return rc;
+
+}

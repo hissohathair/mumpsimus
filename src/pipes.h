@@ -18,6 +18,7 @@ struct Pipe_Handle {
 void pipe_handle_init(struct Pipe_Handle *ph);
 int pipe_open(struct Pipe_Handle *ph, const char *pipe_cmd);
 int pipe_close(struct Pipe_Handle *ph);
+int pipe_reset(struct Pipe_Handle *ph);
 int pipe_fileno(struct Pipe_Handle *ph);
 
 

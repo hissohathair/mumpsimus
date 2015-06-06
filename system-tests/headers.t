@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 6;
+use Test::Command tests => 30;
 use Test::More;
 
 BEGIN {
@@ -17,30 +17,49 @@ my $COMMAND = 'headers';
 
 my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
 
-my $HEAD_TEST_FILE = qx{ find @SEARCH_DIR -name sample-request-get.txt 2>/dev/null };
-my $BODY_TEST_FILE = qx{ find @SEARCH_DIR -name sample-response-302.txt 2>/dev/null };
+my $HEAD_TEST_FILE = qx{ find @SEARCH_DIR -name sample-request-get.txt 2>/dev/null };   chomp($HEAD_TEST_FILE);
+my $BODY_TEST_FILE = qx{ find @SEARCH_DIR -name sample-response-302.txt 2>/dev/null };  chomp($BODY_TEST_FILE);
 my @TEST_FILES = ( $HEAD_TEST_FILE, $BODY_TEST_FILE );
 
 
 
-# 1-3: Header transformation test (test file has header only)
-my $expected = `cat $HEAD_TEST_FILE`; 
+# 1-6: Header transformation test (test file has header only)
+my $expected = qx{ cat $HEAD_TEST_FILE };
 $expected =~ s/^DNT: 1/DNT: banana/gm; 
 
 my $cmd = Test::Command->new( cmd => qq{ $COMMAND -c "sed -e 's/^DNT: 1/DNT: banana/'" < $HEAD_TEST_FILE }  );
-$cmd->exit_is_num( 0, 'HTTP request test command exited normally' );
-$cmd->stdout_is_eq( $expected, 'HTTP request test headers were expected' );
-$cmd->stderr_is_eq( '', 'HTTP request test had no errors on stderr' );
+stress_test($cmd, 'HTTP request SED test', $expected);
 
 
-# 4-6: Header transformation test (test file has response body)
-$expected = `cat $BODY_TEST_FILE`;
+# 7-12: Header transformation test (test file has response body)
+$expected = qx{ cat $BODY_TEST_FILE };
 $expected =~ s/^Server: gws/Server: banana/gm;
 
 $cmd = Test::Command->new( cmd => qq{ $COMMAND -c "sed -e 's/^Server: gws/Server: banana/'" < $BODY_TEST_FILE } );
-$cmd->exit_is_num( 0, 'HTTP response test command exited normally' );
-$cmd->stdout_is_eq( $expected, 'HTTP response test headers were expected' );
-$cmd->stderr_is_eq( '', 'HTTP response test headers had no errors on stderr' );
+stress_test($cmd, 'HTTP response SED test', $expected);
+
+
+# 13-18: Now testing HTTP streams (request, response)
+$expected = qx{ cat @TEST_FILES }; 
+
+$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c noop } );
+stress_test($cmd, 'HTTP req/res NOOP test', $expected);
+
+
+# 19-24: Now test a longer HTTP stream (req, res, req, res)
+push @TEST_FILES, @TEST_FILES;
+$expected = qx{ cat @TEST_FILES };
+
+$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c noop } );
+stress_test($cmd, 'HTTP req/res x 2 NOOP test', $expected);
+
+
+# 25-30: Now test the longer HTTP stream with a header transform (sed)
+$expected =~ s/^Server: gws/Server: banana/gm;
+
+$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c "sed -e 's/^Server: gws/Server: banana/'" } );
+stress_test($cmd, 'HTTP req/res x 2 SED test', $expected);
+
 
 
 # stress_test: 6 tests
@@ -60,9 +79,9 @@ sub stress_test
 
     # Smoke test
     $cmd->run();
-    $cmd->exit_is_num( 0,   "$label: no-op test exited normally" );
+    $cmd->exit_is_num( 0,   "$label: command exited normally" );
     $cmd->stderr_is_eq( '', "$label: no error messages on stderr" );
-    $cmd->stdout_is_eq( $expected, "$label: noop was genuine no-op" );
+    $cmd->stdout_is_eq( $expected, "$label: stdout was expected" );
 
     # Stress test
     my %errors = ( exit_val => 0, stdout_val => 0, stderr_val => 0, );
@@ -74,7 +93,7 @@ sub stress_test
     }
     is( $errors{exit_val},   0, "$label: command exited normally $max_test_runs times" );
     is( $errors{stderr_val}, 0, "$label: command generated 0 errors $max_test_runs times" );
-    is( $errors{stdout_val}, 0, "$label: output uncorrupted correctly $max_test_runs times" );
+    is( $errors{stdout_val}, 0, "$label: output as expected $max_test_runs times" );
 
     return;
 }

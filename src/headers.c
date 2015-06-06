@@ -110,8 +110,11 @@ int cb_headers_complete(http_parser *parser)
   usleep(7000);
 
 
-  // TODO: Flush the headers by resetting the pipe
-
+  // Flush the headers by resetting the pipe
+  if ( pipe_reset(hset->ph) != 0 ) {
+    perror("Broken pipe");
+    return -1;
+  }
 
   return 0;
 }
