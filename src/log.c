@@ -299,7 +299,7 @@ int pass_http_messages(int fd_in, int fd_out, struct Log_Data *log_data)
 	       *buf_ptr, *buf_ptr);
 	  rc = EX_IOERR;
 	}
-      } // while (bytes_read >= 0) && (errors <= 0)
+      } // while (bytes_read > 0) && (errors <= 0)
     } // if...else
   } while ( do_reads && (errors <= 0) );
 

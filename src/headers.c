@@ -6,10 +6,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <paths.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -257,6 +259,7 @@ int pipe_http_messages(int fd_in, int fd_out, struct Pipe_Handle *ph)
   ssize_t last_parsed = 0;
   ssize_t bytes_read  = 0;
   char *buf_ptr = buffer;
+  bool do_reads = true;
   do {
     // Read data from stdin
     memset(buffer, 0, BUFFER_MAX);
@@ -264,34 +267,42 @@ int pipe_http_messages(int fd_in, int fd_out, struct Pipe_Handle *ph)
     bytes_read = read(fd_in, buffer, BUFFER_MAX);
     ulog_debug("Read %zd bytes from fd=%d", bytes_read, fd_in);
 
-    // Repeatedly call http_parser_execute while there is data left in the buffer
-    while ( (bytes_read >= 0) && (errors <= 0) ) {
-      last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
-      ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
+    // Handle error or eof
+    if ( bytes_read < 0 ) {
+      errors++;
+      do_reads = false;
+      ulog(LOG_ERR, "Read returned error %d (%s)", errno, strerror(errno));
+    }
+    else if ( 0 == bytes_read ) {
+      // let http parser know we are done
+      last_parsed = http_parser_execute(&parser, &settings, buf_ptr, 0);
+      ulog(LOG_DEBUG, "Read returned EOF. Have told parser.");
+      do_reads = false;
+    }
+    else {
+      // Repeatedly call http_parser_execute while there is data left in the buffer
+      while ( (bytes_read > 0) && (errors <= 0) ) {
 
-      if ( 0 == bytes_read ) {
-	// Was eof. we've told the parser, so now exit loop 
-	bytes_read = -1;
-      }
-      else if ( last_parsed > 0 ) {
-	// Some data was parsed. Advance to next part of buffer
-	bytes_read -= last_parsed;
-	buf_ptr    += last_parsed;
+	last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
+	ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
-      }
-      else {
-	// Parser returned an error condition
-	errors++;
-	ulog(LOG_ERR, "Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)", parser.type,
-	     http_errno_description(HTTP_PARSER_ERRNO(&parser)),
-	     http_errno_name(HTTP_PARSER_ERRNO(&parser)),
-	     *buf_ptr, *buf_ptr);
-      }
-
+	if ( last_parsed > 0 ) {
+	  // Some data was parsed. Advance to next part of buffer
+	  bytes_read -= last_parsed;
+	  buf_ptr    += last_parsed;
+	}
+	else {
+	  // Parser returned an error condition
+	  errors++;
+	  ulog(LOG_ERR, "Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)", parser.type,
+	       http_errno_description(HTTP_PARSER_ERRNO(&parser)),
+	       http_errno_name(HTTP_PARSER_ERRNO(&parser)),
+	       *buf_ptr, *buf_ptr);
+	} // while (bytes_read > 0) && (errors <= 0)
+      } // if...else
     }
     ulog_debug("Inner parser loop exited (bytes_read=%zd; errors=%d)", bytes_read, errors);
-
-  } while ( (bytes_read > 0) && (errors <= 0) );
+  } while ( do_reads && (errors <= 0) );
 
   // We allocated these
   free(buffer);
