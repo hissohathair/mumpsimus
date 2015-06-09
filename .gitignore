@@ -69,3 +69,5 @@ coverage_report
 _build
 Build
 blib
+MYMETA.json
+MYMETA.yml

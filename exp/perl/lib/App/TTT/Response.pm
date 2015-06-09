@@ -16,6 +16,7 @@ use strict;
 # Modules
 use autodie;
 use IO::Handle;
+use Carp qw(croak);
 
 ## no critic
 our ($VERSION) = ( '\$Revision: 1 \$' =~ m{ \$Revision: \s+ (\S+) }msx );

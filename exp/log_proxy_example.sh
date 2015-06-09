@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# log_proxy_example.sh
+# log_proxy_example.sh [proxy_host [proxy_port]]
 #
 # Requirements:
 #     - assumes you have ncat installed
