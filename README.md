@@ -26,7 +26,7 @@ visiting third party sites. Oh the places we'll go!
 
 The original idea was a tool for debugging during web development. If
 that's your thing then check out the Charles Web Development
-Proxy. It's very handy. Mumpsimus is still a toy.
+Proxy. It's very handy. Mumpsimus is a hacking toy.
 
 
 How it Works
@@ -43,28 +43,33 @@ Here's a simple example:
     $ mkfifo backpipe
     $ nc -l 8080  < backpipe | log | nc proxy 3128 | log -v > backpipe
 
-Or, if you have [Mmap.org's Ncat tool](http://nmap.org/ncat/):
-
-    $ ncat -l -k localhost 8080 -c "log | ncat proxy 3128 | log -v"
-
 *Log* is part of Mumpsimus. It prints information about HTTP messages
-it sees on stderr. So these commands (the two blocks above are
-functionally equivalent):
+it sees on stderr. So the commands above do this:
+
+  - Created a FIFO pipe called *backpipe* in the current directory.
 
   - Listens on port 8080 for browser requests (therefore set your
     proxy to localhost:8080)
 
   - Pipes the browser request through the *log* command, which will
-    print one line on stderr per request
+    print one line on stderr per HTTP message
 
   - Pipes the request through another netcat instance which will
     forward it to a real proxy running on port 3128 (assumes the
     proxy's hostname is "proxy")
 
   - Pipes the response through another *log* command, this time also
-    printing HTTP headers (-v turns this on)
+    printing HTTP headers on stderr (-v turns this on)
 
-  - The resulting output will be sent back to the browser.
+  - The resulting output will be sent back to the browser (unchanged).
+
+If you have [Mmap.org's Ncat tool](http://nmap.org/ncat/) (you *do*
+have Ncat don't you?) this same chain is very easy:
+
+    $ ncat -l -k localhost 8080 -c "log | ncat proxy 3128 | log -v"
+
+Again, this assumes that "proxy" resolves to an actual proxy server
+that listens on port 3128.
 
 Let's play with the Cache-Control header!
 
@@ -79,15 +84,15 @@ browser to cache locally.
 
 Actually, all we're doing above we could do already without
 Mumpsimus. The problem with it is that any line beginning
-"Cache-Control" will be re-written, not just headers. The *pipeif*
+"Cache-Control" will be re-written, not just headers. The *headers*
 tool can help, since it knows HTTP:
 
     $ nc -l 8080  < backpipe | nc proxy 3128 \
-        | pipeif -h -c "sed -e 's/^Cache-Control: .*/Cache-Control: private/'" \
+        | headers -c "sed -e 's/^Cache-Control: .*/Cache-Control: private/'" \
         | log -v > backpipe
 
 Now that _sed_ command will only apply to HTTP headers, because that's
-what *pipeif* does.
+what *headers* does.
 
 
 Installation
@@ -107,7 +112,8 @@ Available
 
 * dup -- echo anything read on stdin to both stdout & stderr
 * log -- print log messages on stderr
-* pipeif -- pipe HTTP header or body through another command
+* headers -- pipe HTTP header through another command before passing
+  it along
 
 For testing only:
 
