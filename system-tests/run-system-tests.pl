@@ -22,10 +22,10 @@ use strict;
 #
 my @TESTS = @ARGV;
 if ( $#TESTS < 0 ) {
-    push @TESTS, "./system-tests/*.t" if ( -d './system-tests' );
-    push @TESTS, '*.t' if ( -f 'noop.t' );
+    push @TESTS, qx{ ls ./system-tests/*.t } if ( -d './system-tests' );
+    push @TESTS, qx{ ls *.t } if ( -f 'noop.t' );
 }
-
+warn "Found " . ($#TESTS+1) . " test files\n";
 
 # Return code ($rc) will be the exit code of the called
 # program. Non-zero indicates failed tests, which we need to
@@ -37,10 +37,18 @@ if ( &prove_exists() ) {
 }
 else {
     foreach my $testf ( @TESTS ) {
+	chomp($testf);
+	warn "Running: $testf\n";
 	$rc += system_check("perl $testf");
     }
 }
 
+if ( $rc ) {
+    warn "Test ERRORS detected (rc=$rc)\n";
+}
+else {
+    warn "Tests appear to have run OK\n";
+}
 exit($rc);
 
 
