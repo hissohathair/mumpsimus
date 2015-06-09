@@ -1,5 +1,5 @@
 /*
- * pipe_headers.c -- send the headers of a HTTP message through a piped command.
+ * headers.c -- send the headers of a HTTP message through a piped command.
  *
  */
 
