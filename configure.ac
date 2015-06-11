@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([mumpsimus], [0.1], [hisso@cpan.org])
+AC_INIT([mumpsimus], [0.2], [hisso@cpan.org])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
@@ -25,7 +25,9 @@ AM_PATH_CHECK([0.9.4], [have_check="yes"],
 AM_CONDITIONAL([HAVE_CHECK], [test x$have_check = "xyes"])
 
 # Checks for header files. 
-#AC_CHECK_HEADERS([sys/types.h])
+AC_CHECK_HEADERS([sys/types.h])
+AC_CHECK_HEADERS([sys/syslimits.h])
+AC_CHECK_HEADERS([linux/limits.h])
 
 # Checks for libraries.
 #AC_SEARCH_LIBS([ceil], [m])
