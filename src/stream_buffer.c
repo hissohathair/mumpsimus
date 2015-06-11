@@ -96,6 +96,11 @@ void stream_buffer_clear(struct Stream_Buffer *buf)
   return;
 }
 
+size_t stream_buffer_size(struct Stream_Buffer *buf) 
+{
+  return buf->curr_size;
+}
+
 
 /*
  * stream_buffer_write: Dumps the contents of the buffer onto file

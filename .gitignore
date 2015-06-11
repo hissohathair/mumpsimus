@@ -24,10 +24,12 @@ README_NEW.md
 /src/noop
 /src/null
 /src/dup
+/src/body
 /src/headers
 /src/headers.OLD.c
 /unit-tests/check_stream_buffer
 /unit-tests/check_util
+/unit-tests/check_pipes
 
 # Editor cruft
 *~

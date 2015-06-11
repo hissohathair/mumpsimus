@@ -28,6 +28,13 @@
 #ifndef URL_MAX
 #  define URL_MAX 2048
 #endif
+#ifndef STRING_MAX
+#  define STRING_MAX 1024
+#endif
+#ifndef LINE_MAX
+#  define LINE_MAX 256
+#endif
+
 
 /*
  * Function prototypes.

@@ -285,7 +285,12 @@ int pass_http_messages(int fd_in, int fd_out, struct Log_Data *log_data)
 	ulog(LOG_DEBUG, "Parsed %zd bytes from %zd\n",
 	     last_parsed, bytes_read); 
 
-	if ( last_parsed > 0 ) {
+	// TODO: Have to handle connection upgrade
+	if ( parser.upgrade ) {
+	  ulog(LOG_ERR, "Parser requested HTTP connection upgrade but that's not implemented yet!");
+	  errors++;
+	}
+	else if ( last_parsed > 0 ) {
 	  // Some data was parsed. Advance buffer.
 	  bytes_read -= last_parsed;
 	  buf_ptr += last_parsed;

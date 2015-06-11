@@ -221,7 +221,7 @@ int pipe_http_messages(int fd_in, int fd_out, struct Pipe_Handle *ph)
   struct headers_settings hset;
   hset.fd_in = fd_in;
   hset.fd_out = fd_out;
-  hset.fd_pipe = pipe_fileno(ph);
+  hset.fd_pipe = pipe_write_fileno(ph);
   hset.url = malloc(sizeof(char) * URL_MAX);
   hset.sbuf = stream_buffer_new(); 
   hset.ph = ph;
@@ -286,7 +286,12 @@ int pipe_http_messages(int fd_in, int fd_out, struct Pipe_Handle *ph)
 	last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
 	ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
-	if ( last_parsed > 0 ) {
+	// TODO: Have to handle connection upgrade
+	if ( parser.upgrade ) {
+	  ulog(LOG_ERR, "Parser requested HTTP connection upgrade but that's not implemented yet!");
+	  errors++;
+	}
+	else if ( last_parsed > 0 ) {
 	  // Some data was parsed. Advance to next part of buffer
 	  bytes_read -= last_parsed;
 	  buf_ptr    += last_parsed;
@@ -324,7 +329,7 @@ void usage(const char *ident, const char *message)
 {
   if ( message != NULL )
     fprintf(stderr, "error: %s\n", message);
-  fprintf(stderr, "usage: %s [-hb] -c command\n", ident);
+  fprintf(stderr, "usage: %s -c command\n", ident);
   exit( EX_USAGE );
 }
 
@@ -376,16 +381,21 @@ int main(int argc, char *argv[])
   ulog(LOG_INFO, "Piping all HTTP headers through %s", pipe_cmd);
 
 
-  struct Pipe_Handle ph;
-  pipe_handle_init(&ph);
-  if ( pipe_open(&ph, pipe_cmd) != 0 ) {
+  struct Pipe_Handle *ph = pipe_handle_new();
+  if ( ph == NULL ) {
+    perror("Error returned from malloc");
+    return EX_OSERR;
+  }
+
+  if ( pipe_open(ph, pipe_cmd) != 0 ) {
     ulog(LOG_ERR, "%s: Unable to open pipe to: %s", argv[0], pipe_cmd);
     rc = EX_UNAVAILABLE;
   }
   else {
     ulog(LOG_INFO, "%s: Opened pipe to: %s", argv[0], pipe_cmd);
-    rc = pipe_http_messages(STDIN_FILENO, STDOUT_FILENO, &ph);
-    pipe_close(&ph);
+    rc = pipe_http_messages(STDIN_FILENO, STDOUT_FILENO, ph);
+    pipe_close(ph);
+    pipe_handle_delete(ph);
   }
 
   ulog_close();

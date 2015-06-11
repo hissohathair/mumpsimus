@@ -18,5 +18,6 @@ void stream_buffer_delete(struct Stream_Buffer *buf);
 size_t stream_buffer(struct Stream_Buffer *buf, const char *nbuff, const size_t length);
 void stream_buffer_clear(struct Stream_Buffer *buf);
 size_t stream_buffer_write(struct Stream_Buffer *buf, int fd);
+size_t stream_buffer_size(struct Stream_Buffer *buf);
 
 #endif
