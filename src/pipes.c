@@ -1,15 +1,25 @@
 /* pipes.c: Library for handling pipes.
  */
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
+
 #include <assert.h>
 #include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/syslimits.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
+#ifdef HAVE_SYS_SYSLIMITS_H
+#  include <sys/syslimits.h>
+#endif
+#ifdef HAVE_LINUX_LIMITS_H
+#  include <linux/limits.h>
+#endif
 
 #include "pipes.h"
 #include "ulog.h"
