@@ -76,6 +76,15 @@ START_TEST(test_upper_power_of_two)
 }
 END_TEST
 
+START_TEST(test_min_macro)
+{
+  fail_unless( MIN(1,2) == 1 );
+  fail_unless( MIN(2,1) == 1 );
+  fail_unless( MIN(-2,1) == -2 );
+  fail_unless( MIN(1,-2) == -2 );
+}
+END_TEST
+
 Suite *util_suite(void)
 {
   Suite *s = suite_create("util_suite");
@@ -84,6 +93,7 @@ Suite *util_suite(void)
   TCase *tc_core = tcase_create("Core");
   tcase_add_test(tc_core, test_strlcat);
   tcase_add_test(tc_core, test_upper_power_of_two);
+  tcase_add_test(tc_core, test_min_macro);
   suite_add_tcase(s, tc_core);
   return s;
 }

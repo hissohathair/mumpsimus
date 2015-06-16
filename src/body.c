@@ -49,10 +49,11 @@
  *    ph          Pipe_Handle for communicating with pipe command.
  */
 struct Body_State {
-  int    fd_stdin;
-  int    fd_stdout;
-  char  *url;
-  char  *status_line;
+  int     fd_stdin;
+  int     fd_stdout;
+  ssize_t content_length_at;
+  char   *url;
+  char   *status_line;
   struct Stream_Buffer *headers;
   struct Stream_Buffer *body;
   struct Pipe_Handle *ph;
@@ -68,6 +69,7 @@ void body_state_init(struct Body_State *bstate)
 {
   bstate->fd_stdin = STDIN_FILENO;
   bstate->fd_stdout = STDOUT_FILENO;
+  bstate->content_length_at = -1;
   
   bstate->url = malloc(URL_MAX);
   bstate->status_line = malloc(LINE_MAX);
@@ -167,7 +169,7 @@ int cb_headers_complete(http_parser *parser)
   ulog_debug("cb_headers_complete(parser=%X, parser->type=%d): %s\n", parser, parser->type, str);
 
   // Append blank line to end of HTTP headers.
-  stream_buffer(bstate->headers, "\r\n", 2);
+  stream_buffer_add(bstate->headers, "\r\n", 2);
 
   return 0;
 }
@@ -181,6 +183,10 @@ int cb_headers_complete(http_parser *parser)
 int cb_status_complete(http_parser *parser, const char *at, size_t length)
 {
   struct Body_State *bstate = (struct Body_State*)parser->data;
+
+  // Reset headers
+  bstate->content_length_at = -1;
+  stream_buffer_clear(bstate->headers);
 
   // Safely copy URL to allocated space
   if ( length < URL_MAX ) {
@@ -203,11 +209,20 @@ int cb_status_complete(http_parser *parser, const char *at, size_t length)
  *    our output (stream) buffer. Also need to add the colon and
  *    trailing space.
  */
+#define CONTENT_LENGTH_STR "content-length"
+#define CONTENT_LENGTH_LEN 14
 int cb_header_field(http_parser *parser, const char *at, size_t length)
 {
   struct Body_State *bstate = (struct Body_State*)parser->data;
-  stream_buffer(bstate->headers, at, length);
-  stream_buffer(bstate->headers, ": ", 2);  
+
+  // If this header field is for Content-Length, remember where we are before appending
+  if ( strncasecmp(CONTENT_LENGTH_STR, at, MIN(length, CONTENT_LENGTH_LEN)) == 0 ) {
+    bstate->content_length_at = stream_buffer_size(bstate->headers);
+  }
+
+  // Now append headers to output buffer
+  stream_buffer_add(bstate->headers, at, length);
+  stream_buffer_add(bstate->headers, ": ", 2);  
   return 0;
 }
 
@@ -221,8 +236,8 @@ int cb_header_field(http_parser *parser, const char *at, size_t length)
 int cb_header_value(http_parser *parser, const char *at, size_t length)
 {
   struct Body_State *bstate = (struct Body_State*)parser->data;
-  stream_buffer(bstate->headers, at, length);
-  stream_buffer(bstate->headers, "\r\n", 2);
+  stream_buffer_add(bstate->headers, at, length);
+  stream_buffer_add(bstate->headers, "\r\n", 2);
   return 0;
 }
 
@@ -278,27 +293,42 @@ int cb_message_complete(http_parser *parser)
   do {
     bytes_read = read(pipe_read_fileno(bstate->ph), buffer, BUFFER_MAX);
     if ( bytes_read > 0 )
-      stream_buffer(bstate->body, buffer, bytes_read);
+      stream_buffer_add(bstate->body, buffer, bytes_read);
     else if ( bytes_read < 0 )
       ulog(LOG_ERR, "read returned an error (%d): %s", errno, strerror(errno));
   } while ( bytes_read > 0 );
 
   // Get the new body length
-  size_t body_length = stream_buffer_size(bstate->body); // TODO: size_t vs ssize_t?
+  size_t body_length = stream_buffer_size(bstate->body);
 
-  // TODO: Fix Content-Length
+  // Output HTTP status message
   ulog_debug("Body length is %zd", body_length);
-
-  // Output the (now fixed) headers to stdout, and write the body too!
   write(bstate->fd_stdout, bstate->status_line, strlen(bstate->status_line));
-  stream_buffer_write(bstate->headers, bstate->fd_stdout);
+
+  if ( bstate->content_length_at >= 0 ) {
+    // Output all headers up to (not including) Content-Length
+    stream_buffer_write_to(bstate->headers, bstate->fd_stdout, bstate->content_length_at);
+    snprintf(buffer, BUFFER_MAX, "Content-Length: %zd\r\nX-Mumpsimus-Original-", body_length);
+    write(bstate->fd_stdout, buffer, strlen(buffer));
+
+    // Rest of headers buffer already includes blank line
+    stream_buffer_write(bstate->headers, bstate->fd_stdout);
+  }
+  else {
+    // No Content-Length header! TODO: Should we add a "Connection: close" here?
+    stream_buffer_write(bstate->headers, bstate->fd_stdout);
+  }
+
+  // Output the new body
   stream_buffer_write(bstate->body, bstate->fd_stdout);
 
-  // Reset parser
+  // Reset parser & pipe
   http_parser_init(parser, HTTP_BOTH);
-
-  // Reset the pipe
   pipe_reset(bstate->ph);
+  bstate->content_length_at = -1;
+
+  // Free memory from this routine
+  free(buffer);
   return 0;
 }
 

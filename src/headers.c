@@ -104,7 +104,7 @@ int cb_headers_complete(http_parser *parser)
 
   // Append blank line to end of HTTP headers, then write the buffered HTTP
   // headers message.
-  stream_buffer(hset->sbuf, "\r\n", 2);
+  stream_buffer_add(hset->sbuf, "\r\n", 2);
   stream_buffer_write(hset->sbuf, fd);
 
   // Free mem & short pause... (TODO: Fix)
@@ -167,8 +167,8 @@ int cb_status_complete(http_parser *parser, const char *at, size_t length)
 int cb_header_field(http_parser *parser, const char *at, size_t length)
 {
   struct headers_settings *hset = (struct headers_settings*)parser->data;
-  stream_buffer(hset->sbuf, at, length);
-  stream_buffer(hset->sbuf, ": ", 2);  
+  stream_buffer_add(hset->sbuf, at, length);
+  stream_buffer_add(hset->sbuf, ": ", 2);  
   return 0;
 }
 
@@ -181,8 +181,8 @@ int cb_header_field(http_parser *parser, const char *at, size_t length)
 int cb_header_value(http_parser *parser, const char *at, size_t length)
 {
   struct headers_settings *hset = (struct headers_settings*)parser->data;
-  stream_buffer(hset->sbuf, at, length);
-  stream_buffer(hset->sbuf, "\r\n", 2);
+  stream_buffer_add(hset->sbuf, at, length);
+  stream_buffer_add(hset->sbuf, "\r\n", 2);
   return 0;
 }
 

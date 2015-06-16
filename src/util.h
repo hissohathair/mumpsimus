@@ -1,5 +1,4 @@
-/*
- * util.h -- common useful functions for I/O etc.
+/* util.h: Common useful functions for I/O etc.
  *
  * After including this file, the caller can
  *   - rely on a subset of sysexits.h defines existing (see below)
@@ -19,9 +18,7 @@
 #endif
 
 
-/* 
- * Occassionally useful macros.
- */
+
 #ifndef BUFFER_MAX
 #  define BUFFER_MAX 32 * 1024
 #endif
@@ -34,6 +31,9 @@
 #ifndef LINE_MAX
 #  define LINE_MAX 256
 #endif
+
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+
 
 
 /*
