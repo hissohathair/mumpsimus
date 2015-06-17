@@ -124,18 +124,8 @@ For testing only:
 TODO
 ----
 
-Not yet written, although often have a Perl prototype in the "exp"
-directory:
-
-* cache -- save a local copy to disk, and use that copy for subsequent
-  requests
-* connect -- fetch a resource
-* get -- generate a sample HTTP request
-* insert_header -- insert a new HTTP header
-* no_cache -- disable cacheing
-* proxy -- listen for browser requests
-* remove_header -- remove a header line
-* spoof -- request a resource from another server
+See the file [TODO.md](TODO.md). See also [Github Issues
+Tracker](https://github.com/hissohathair/mumpsimus/issues).
 
 
 Requirements
