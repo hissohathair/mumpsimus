@@ -48,12 +48,13 @@
  *    body        Stream buffer for storing piped (modified) body.
  *    ph          Pipe_Handle for communicating with pipe command.
  */
-struct Body_State {
-  int     fd_stdin;
-  int     fd_stdout;
+struct Body_State
+{
+  int fd_stdin;
+  int fd_stdout;
   ssize_t content_length_at;
-  char   *url;
-  char   *status_line;
+  char *url;
+  char *status_line;
   struct Stream_Buffer *headers;
   struct Stream_Buffer *body;
   struct Pipe_Handle *ph;
@@ -65,32 +66,36 @@ struct Body_State {
  *    Initilises and allocates memory for Body_State fields. Aborts
  *    (terminates) program on malloc errors, otherwise returns void.
  */
-void body_state_init(struct Body_State *bstate)
+void
+body_state_init (struct Body_State *bstate)
 {
   bstate->fd_stdin = STDIN_FILENO;
   bstate->fd_stdout = STDOUT_FILENO;
   bstate->content_length_at = -1;
-  
-  bstate->url = malloc(URL_MAX);
-  bstate->status_line = malloc(LINE_MAX);
-  if ( (bstate->url == NULL) || (bstate->status_line == NULL) ) {
-    perror("malloc() error initialising body state");
-    abort();
-  }
-  bzero(bstate->url, URL_MAX);
-  bzero(bstate->status_line, LINE_MAX);
 
-  bstate->headers = stream_buffer_new();
-  bstate->body = stream_buffer_new();
-  if ( (bstate->headers == NULL) || (bstate->body == NULL) ) {
-    perror("stream_buffer_new() error initiaising body state");
-    abort();
+  bstate->url = malloc (URL_MAX);
+  bstate->status_line = malloc (LINE_MAX);
+  if ((bstate->url == NULL) || (bstate->status_line == NULL))
+  {
+    perror ("malloc() error initialising body state");
+    abort ();
+  }
+  bzero (bstate->url, URL_MAX);
+  bzero (bstate->status_line, LINE_MAX);
+
+  bstate->headers = stream_buffer_new ();
+  bstate->body = stream_buffer_new ();
+  if ((bstate->headers == NULL) || (bstate->body == NULL))
+  {
+    perror ("stream_buffer_new() error initiaising body state");
+    abort ();
   }
 
-  bstate->ph = pipe_handle_new();
-  if ( bstate->ph == NULL ) {
-    perror("pipe_handle_new() error initialising body state");
-    abort();
+  bstate->ph = pipe_handle_new ();
+  if (bstate->ph == NULL)
+  {
+    perror ("pipe_handle_new() error initialising body state");
+    abort ();
   }
 
   return;
@@ -100,13 +105,19 @@ void body_state_init(struct Body_State *bstate)
  *
  *    Frees allocated memory. Returns void.
  */
-void body_state_delete(struct Body_State *bstate)
+void
+body_state_delete (struct Body_State *bstate)
 {
-  free(bstate->url); bstate->url = NULL;
-  free(bstate->status_line); bstate->status_line = NULL;
-  stream_buffer_delete(bstate->headers); bstate->headers = NULL;
-  stream_buffer_delete(bstate->body); bstate->body = NULL;
-  pipe_handle_delete(bstate->ph); bstate->ph = NULL;
+  free (bstate->url);
+  bstate->url = NULL;
+  free (bstate->status_line);
+  bstate->status_line = NULL;
+  stream_buffer_delete (bstate->headers);
+  bstate->headers = NULL;
+  stream_buffer_delete (bstate->body);
+  bstate->body = NULL;
+  pipe_handle_delete (bstate->ph);
+  bstate->ph = NULL;
   return;
 }
 
@@ -117,21 +128,24 @@ void body_state_delete(struct Body_State *bstate)
  *    Callback from http_parser, called when URL read. Preserves the
  *    URL for later.
  */
-int cb_url(http_parser *parser, const char *at, size_t length) 
+int
+cb_url (http_parser * parser, const char *at, size_t length)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
 
   // Safely copy URL to buffer provided.
-  if ( length < URL_MAX ) {
-    strncpy(bstate->url, at, length);
+  if (length < URL_MAX)
+  {
+    strncpy (bstate->url, at, length);
     bstate->url[length] = '\0';
   }
-  else {
-    strncpy(bstate->url, at, URL_MAX-1);
-    bstate->url[URL_MAX-1] = '\0';
-    ulog(LOG_WARNING, "URL exceeded %zd bytes and was truncated", URL_MAX);
+  else
+  {
+    strncpy (bstate->url, at, URL_MAX - 1);
+    bstate->url[URL_MAX - 1] = '\0';
+    ulog (LOG_WARNING, "URL exceeded %zd bytes and was truncated", URL_MAX);
   }
-  ulog_debug("Recorded URL of HTTP message: %s", bstate->url);
+  ulog_debug ("Recorded URL of HTTP message: %s", bstate->url);
   return 0;
 }
 
@@ -144,32 +158,32 @@ int cb_url(http_parser *parser, const char *at, size_t length)
  *    header.
  *
  */
-int cb_headers_complete(http_parser *parser)
+int
+cb_headers_complete (http_parser * parser)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
   char *str = bstate->status_line;
 
   // Build the HTTP message start based on message type
-  if ( HTTP_REQUEST == parser->type ) {
-    snprintf(str, BUFFER_MAX, "%s %s HTTP/%d.%d\r\n",
-	     http_method_str(parser->method), 
-	     bstate->url,
-	     parser->http_major, 
-	     parser->http_minor);
+  if (HTTP_REQUEST == parser->type)
+  {
+    snprintf (str, BUFFER_MAX, "%s %s HTTP/%d.%d\r\n",
+	      http_method_str (parser->method),
+	      bstate->url, parser->http_major, parser->http_minor);
   }
-  else {
-    snprintf(str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
-	     parser->http_major, 
-	     parser->http_minor, 
-	     parser->status_code,
-	     bstate->url);
+  else
+  {
+    snprintf (str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
+	      parser->http_major,
+	      parser->http_minor, parser->status_code, bstate->url);
   }
 
   // Headers are written to the pipe
-  ulog_debug("cb_headers_complete(parser=%X, parser->type=%d): %s\n", parser, parser->type, str);
+  ulog_debug ("cb_headers_complete(parser=%X, parser->type=%d): %s\n", parser,
+	      parser->type, str);
 
   // Append blank line to end of HTTP headers.
-  stream_buffer_add(bstate->headers, "\r\n", 2);
+  stream_buffer_add (bstate->headers, "\r\n", 2);
 
   return 0;
 }
@@ -180,24 +194,27 @@ int cb_headers_complete(http_parser *parser)
  *    Called when the HTTP status has been read. Take opportunity to
  *    record the URL (pointed to by "at").
  */
-int cb_status_complete(http_parser *parser, const char *at, size_t length)
+int
+cb_status_complete (http_parser * parser, const char *at, size_t length)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
 
   // Reset headers
   bstate->content_length_at = -1;
-  stream_buffer_clear(bstate->headers);
+  stream_buffer_clear (bstate->headers);
 
   // Safely copy URL to allocated space
-  if ( length < URL_MAX ) {
-    strncpy(bstate->url, at, length);
+  if (length < URL_MAX)
+  {
+    strncpy (bstate->url, at, length);
     bstate->url[length] = '\0';
   }
-  else {
-    strncpy(bstate->url, at, URL_MAX-1);
+  else
+  {
+    strncpy (bstate->url, at, URL_MAX - 1);
     bstate->url[URL_MAX] = '\0';
   }
-  ulog_debug("HTTP response status: %s", bstate->url);
+  ulog_debug ("HTTP response status: %s", bstate->url);
   return 0;
 }
 
@@ -211,18 +228,21 @@ int cb_status_complete(http_parser *parser, const char *at, size_t length)
  */
 #define CONTENT_LENGTH_STR "content-length"
 #define CONTENT_LENGTH_LEN 14
-int cb_header_field(http_parser *parser, const char *at, size_t length)
+int
+cb_header_field (http_parser * parser, const char *at, size_t length)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
 
   // If this header field is for Content-Length, remember where we are before appending
-  if ( strncasecmp(CONTENT_LENGTH_STR, at, MIN(length, CONTENT_LENGTH_LEN)) == 0 ) {
-    bstate->content_length_at = stream_buffer_size(bstate->headers);
+  if (strncasecmp (CONTENT_LENGTH_STR, at, MIN (length, CONTENT_LENGTH_LEN))
+      == 0)
+  {
+    bstate->content_length_at = stream_buffer_size (bstate->headers);
   }
 
   // Now append headers to output buffer
-  stream_buffer_add(bstate->headers, at, length);
-  stream_buffer_add(bstate->headers, ": ", 2);  
+  stream_buffer_add (bstate->headers, at, length);
+  stream_buffer_add (bstate->headers, ": ", 2);
   return 0;
 }
 
@@ -233,11 +253,12 @@ int cb_header_field(http_parser *parser, const char *at, size_t length)
  *    has been read. Append this to the same output stream buffer. Parser
  *    has stripped the trailing newline sequence so need to add that.
  */
-int cb_header_value(http_parser *parser, const char *at, size_t length)
+int
+cb_header_value (http_parser * parser, const char *at, size_t length)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
-  stream_buffer_add(bstate->headers, at, length);
-  stream_buffer_add(bstate->headers, "\r\n", 2);
+  struct Body_State *bstate = (struct Body_State *) parser->data;
+  stream_buffer_add (bstate->headers, at, length);
+  stream_buffer_add (bstate->headers, "\r\n", 2);
   return 0;
 }
 
@@ -250,13 +271,15 @@ int cb_header_value(http_parser *parser, const char *at, size_t length)
  *    sure the piped command doesn't block on write because its
  *    output buffers are full.
  */
-int cb_body(http_parser *parser, const char *at, size_t length)
+int
+cb_body (http_parser * parser, const char *at, size_t length)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
 
-  int fd = pipe_write_fileno(bstate->ph);
-  write_all(fd, at, length);
-  ulog_debug("cb_body(parser=%X, at=%X, length=%zd) -> fd=%d", parser, at, length, fd);
+  int fd = pipe_write_fileno (bstate->ph);
+  write_all (fd, at, length);
+  ulog_debug ("cb_body(parser=%X, at=%X, length=%zd) -> fd=%d", parser, at,
+	      length, fd);
 
   return 0;
 }
@@ -275,60 +298,70 @@ int cb_body(http_parser *parser, const char *at, size_t length)
  *        - Reset the pipe.
  *        - Reset the parser.
  */
-int cb_message_complete(http_parser *parser)
+int
+cb_message_complete (http_parser * parser)
 {
-  struct Body_State *bstate = (struct Body_State*)parser->data;
+  struct Body_State *bstate = (struct Body_State *) parser->data;
 
   // Close the write end of the pipe so that it gets eof and flushes data
-  pipe_send_eof(bstate->ph);
+  pipe_send_eof (bstate->ph);
 
   // Read remaining data from read-end of pipe.
-  char *buffer = malloc(BUFFER_MAX);
-  if ( buffer == NULL ) {
-    perror("Error retured from malloc");
-    abort();
+  char *buffer = malloc (BUFFER_MAX);
+  if (buffer == NULL)
+  {
+    perror ("Error retured from malloc");
+    abort ();
   }
 
   ssize_t bytes_read = 0;
-  do {
-    bytes_read = read(pipe_read_fileno(bstate->ph), buffer, BUFFER_MAX);
-    if ( bytes_read > 0 )
-      stream_buffer_add(bstate->body, buffer, bytes_read);
-    else if ( bytes_read < 0 )
-      ulog(LOG_ERR, "read returned an error (%d): %s", errno, strerror(errno));
-  } while ( bytes_read > 0 );
+  do
+  {
+    bytes_read = read (pipe_read_fileno (bstate->ph), buffer, BUFFER_MAX);
+    if (bytes_read > 0)
+      stream_buffer_add (bstate->body, buffer, bytes_read);
+    else if (bytes_read < 0)
+      ulog (LOG_ERR, "read returned an error (%d): %s", errno,
+	    strerror (errno));
+  }
+  while (bytes_read > 0);
 
   // Get the new body length
-  size_t body_length = stream_buffer_size(bstate->body);
+  size_t body_length = stream_buffer_size (bstate->body);
 
   // Output HTTP status message
-  ulog_debug("Body length is %zd", body_length);
-  write(bstate->fd_stdout, bstate->status_line, strlen(bstate->status_line));
+  ulog_debug ("Body length is %zd", body_length);
+  write (bstate->fd_stdout, bstate->status_line,
+	 strlen (bstate->status_line));
 
-  if ( bstate->content_length_at >= 0 ) {
+  if (bstate->content_length_at >= 0)
+  {
     // Output all headers up to (not including) Content-Length
-    stream_buffer_write_to(bstate->headers, bstate->fd_stdout, bstate->content_length_at);
-    snprintf(buffer, BUFFER_MAX, "Content-Length: %zd\r\nX-Mumpsimus-Original-", body_length);
-    write(bstate->fd_stdout, buffer, strlen(buffer));
+    stream_buffer_write_to (bstate->headers, bstate->fd_stdout,
+			    bstate->content_length_at);
+    snprintf (buffer, BUFFER_MAX,
+	      "Content-Length: %zd\r\nX-Mumpsimus-Original-", body_length);
+    write (bstate->fd_stdout, buffer, strlen (buffer));
 
     // Rest of headers buffer already includes blank line
-    stream_buffer_write(bstate->headers, bstate->fd_stdout);
+    stream_buffer_write (bstate->headers, bstate->fd_stdout);
   }
-  else {
+  else
+  {
     // No Content-Length header! TODO: Should we add a "Connection: close" here?
-    stream_buffer_write(bstate->headers, bstate->fd_stdout);
+    stream_buffer_write (bstate->headers, bstate->fd_stdout);
   }
 
   // Output the new body
-  stream_buffer_write(bstate->body, bstate->fd_stdout);
+  stream_buffer_write (bstate->body, bstate->fd_stdout);
 
   // Reset parser & pipe
-  http_parser_init(parser, HTTP_BOTH);
-  pipe_reset(bstate->ph);
+  http_parser_init (parser, HTTP_BOTH);
+  pipe_reset (bstate->ph);
   bstate->content_length_at = -1;
 
   // Free memory from this routine
-  free(buffer);
+  free (buffer);
   return 0;
 }
 
@@ -338,7 +371,8 @@ int cb_message_complete(http_parser *parser)
  *     Want to read from stdin ---> send it to pipe's stdin.  Read
  *     from pipe's stdout ---> send it to my stdout.
  */
-int pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd)
+int
+pipe_http_messages (int fd_in, int fd_out, const char *pipe_cmd)
 {
   int errors = 0;
   int rc = EX_OK;
@@ -346,13 +380,13 @@ int pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd)
 
   // This struct will hold inforamtion we need on each callback
   struct Body_State bstate;
-  body_state_init(&bstate);
+  body_state_init (&bstate);
   bstate.fd_stdin = fd_in;
   bstate.fd_stdout = fd_out;
 
   // This struct sets up callbacks for the HTTP parser
   http_parser_settings settings;
-  http_parser_settings_init(&settings);
+  http_parser_settings_init (&settings);
   settings.on_header_field = cb_header_field;
   settings.on_header_value = cb_header_value;
   settings.on_headers_complete = cb_headers_complete;
@@ -363,78 +397,93 @@ int pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd)
 
   // Initialise a new HTTP parser
   http_parser parser;
-  http_parser_init(&parser, HTTP_BOTH);
-  parser.data = (void*)&bstate;
+  http_parser_init (&parser, HTTP_BOTH);
+  parser.data = (void *) &bstate;
 
 
   // Now need to open pipe command 
-  if ( pipe_open2(bstate.ph, pipe_cmd) != 0 ) {
-    ulog(LOG_ERR, "Unable to open pipe to command: %s", pipe_cmd);
+  if (pipe_open2 (bstate.ph, pipe_cmd) != 0)
+  {
+    ulog (LOG_ERR, "Unable to open pipe to command: %s", pipe_cmd);
     return -1;
   }
 
 
   // Buffer for reading data from stdin
-  char *buffer = malloc(BUFFER_MAX);
-  if ( NULL == buffer ) {
-    perror("Error from malloc");
+  char *buffer = malloc (BUFFER_MAX);
+  if (NULL == buffer)
+  {
+    perror ("Error from malloc");
     return -1;
   }
 
 
   ssize_t last_parsed = 0;
-  ssize_t bytes_read  = 0;
+  ssize_t bytes_read = 0;
   char *buf_ptr = buffer;
   bool do_reads = true;
-  do {
+  do
+  {
     // Read data from stdin
-    memset(buffer, 0, BUFFER_MAX);
+    memset (buffer, 0, BUFFER_MAX);
     buf_ptr = buffer;
-    bytes_read = read(fd_in, buffer, BUFFER_MAX);
-    ulog_debug("Read %zd bytes from fd=%d", bytes_read, fd_in);
+    bytes_read = read (fd_in, buffer, BUFFER_MAX);
+    ulog_debug ("Read %zd bytes from fd=%d", bytes_read, fd_in);
 
     // Handle error or eof
-    if ( bytes_read < 0 ) {
+    if (bytes_read < 0)
+    {
       errors++;
       do_reads = false;
-      ulog(LOG_ERR, "Read returned error %d (%s)", errno, strerror(errno));
+      ulog (LOG_ERR, "Read returned error %d (%s)", errno, strerror (errno));
     }
-    else if ( 0 == bytes_read ) {
+    else if (0 == bytes_read)
+    {
       // let http parser know we are done
-      last_parsed = http_parser_execute(&parser, &settings, buf_ptr, 0);
-      ulog(LOG_DEBUG, "Read returned EOF. Have told parser.");
+      last_parsed = http_parser_execute (&parser, &settings, buf_ptr, 0);
+      ulog (LOG_DEBUG, "Read returned EOF. Have told parser.");
       do_reads = false;
     }
-    else {
+    else
+    {
       // Repeatedly call http_parser_execute while there is data left in the buffer
-      while ( (bytes_read > 0) && (errors <= 0) ) {
+      while ((bytes_read > 0) && (errors <= 0))
+      {
 
-	last_parsed = http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
-	ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
+	last_parsed =
+	  http_parser_execute (&parser, &settings, buf_ptr, bytes_read);
+	ulog_debug ("Parsed %zd bytes out of %zd bytes remaining",
+		    last_parsed, bytes_read);
 
-	if ( last_parsed > 0 ) {
+	if (last_parsed > 0)
+	{
 	  // Some data was parsed. Advance to next part of buffer
 	  bytes_read -= last_parsed;
-	  buf_ptr    += last_parsed;
+	  buf_ptr += last_parsed;
 	}
-	else {
+	else
+	{
 	  // Parser returned an error condition
 	  errors++;
-	  ulog(LOG_ERR, "Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)", parser.type,
-	       http_errno_description(HTTP_PARSER_ERRNO(&parser)),
-	       http_errno_name(HTTP_PARSER_ERRNO(&parser)),
-	       *buf_ptr, *buf_ptr);
-	} // while (bytes_read > 0) && (errors <= 0)
-      } // if...else
+	  ulog (LOG_ERR,
+		"Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)",
+		parser.type,
+		http_errno_description (HTTP_PARSER_ERRNO (&parser)),
+		http_errno_name (HTTP_PARSER_ERRNO (&parser)), *buf_ptr,
+		*buf_ptr);
+	}			// while (bytes_read > 0) && (errors <= 0)
+      }				// if...else
     }
-    ulog_debug("Inner parser loop exited (bytes_read=%zd; errors=%d)", bytes_read, errors);
-  } while ( do_reads && (errors <= 0) );
+    ulog_debug ("Inner parser loop exited (bytes_read=%zd; errors=%d)",
+		bytes_read, errors);
+  }
+  while (do_reads && (errors <= 0));
 
   // We allocated these
-  free(buffer);
-  body_state_delete(&bstate);
+  free (buffer);
+  body_state_delete (&bstate);
 
-  if ( errors > 0 )
+  if (errors > 0)
     rc = EX_IOERR;
 
   return rc;
@@ -445,12 +494,13 @@ int pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd)
  *
  *    Command usage and exit. Does not return!
  */
-void usage(const char *ident, const char *message)
+void
+usage (const char *ident, const char *message)
 {
-  if ( message != NULL )
-    fprintf(stderr, "error: %s\n", message);
-  fprintf(stderr, "usage: %s -c command\n", ident);
-  exit( EX_USAGE );
+  if (message != NULL)
+    fprintf (stderr, "error: %s\n", message);
+  fprintf (stderr, "usage: %s -c command\n", ident);
+  exit (EX_USAGE);
 }
 
 
@@ -463,48 +513,53 @@ void usage(const char *ident, const char *message)
  *    0       All OK
  *    >=1     Error code returned to environment.
  */
-int main(int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
-  int rc = EX_OK;           // Exit code to return to environment
-  char *pipe_cmd = NULL;    // Pointer to command line to pipe output through
+  int rc = EX_OK;		// Exit code to return to environment
+  char *pipe_cmd = NULL;	// Pointer to command line to pipe output through
 
   // TODO: Maybe add option to only do requests or responses?
 
   // Process command line arguments
   int c = 0;
-  while ( (c = getopt(argc, argv, "c:")) != -1 ) {
-    switch ( c )
-      {
-      case 'c':
-	if ( NULL == optarg )
-	  usage(argv[0], "Must pass a command to -c");
-	pipe_cmd = optarg;
-	break;
-      case '?':
-	usage(argv[0], NULL);
-	break;
-      }
+  while ((c = getopt (argc, argv, "c:")) != -1)
+  {
+    switch (c)
+    {
+    case 'c':
+      if (NULL == optarg)
+	usage (argv[0], "Must pass a command to -c");
+      pipe_cmd = optarg;
+      break;
+    case '?':
+      usage (argv[0], NULL);
+      break;
+    }
   }
 
   // Sanity check environment
-  if ( NULL == pipe_cmd ) {
-    usage(argv[0], "Must provide a command to pipe through with -c <command>");
+  if (NULL == pipe_cmd)
+  {
+    usage (argv[0],
+	   "Must provide a command to pipe through with -c <command>");
   }
 
-  if ( system(NULL) == 0 ) {
-    perror("System shell is not available");
+  if (system (NULL) == 0)
+  {
+    perror ("System shell is not available");
     return EX_OSERR;
   }
 
 
   // Initialise logging tool and begin debug log message
-  ulog_init(argv[0]);
-  ulog(LOG_INFO, "Piping all HTTP message bodies through %s", pipe_cmd);
+  ulog_init (argv[0]);
+  ulog (LOG_INFO, "Piping all HTTP message bodies through %s", pipe_cmd);
 
   // Call main program loop
-  rc = pipe_http_messages(STDIN_FILENO, STDOUT_FILENO, pipe_cmd);
+  rc = pipe_http_messages (STDIN_FILENO, STDOUT_FILENO, pipe_cmd);
 
-  ulog_close();
+  ulog_close ();
 
   return rc;
 }

@@ -11,9 +11,9 @@
 # define ulog_ping(x)
 #endif
 
-void ulog_init(const char *ident);
-void ulog(int priority, const char *message, ...);
-void ulog_close(void);
+void ulog_init (const char *ident);
+void ulog (int priority, const char *message, ...);
+void ulog_close (void);
 
 
 #endif /* __ULOG_H__ */

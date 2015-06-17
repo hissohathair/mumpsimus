@@ -19,12 +19,13 @@
  * Credit: http://graphics.stanford.edu/~seander/bithacks.html
  *     via http://stackoverflow.com/questions/466204/rounding-off-to-nearest-power-of-2
  */
-size_t upper_power_of_two(const size_t n)
+size_t
+upper_power_of_two (const size_t n)
 {
   size_t v = n;
-  if ( n <= 1 )
+  if (n <= 1)
     return 2;
-  else if ( SIZE_MAX == n )
+  else if (SIZE_MAX == n)
     return SIZE_MAX;
 
   v--;
@@ -41,17 +42,20 @@ size_t upper_power_of_two(const size_t n)
  * write_all: Will retry interrupted write(2) calls until either an error
  * occurs or all bytes successfully written.
  */
-ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write)
-{  
+ssize_t
+write_all (const int fd, const char *buf, const ssize_t bytes_to_write)
+{
   ssize_t total_bytes = 0;
   ssize_t nw = 0;
-  do {
-    nw = write(fd, buf + total_bytes, bytes_to_write - total_bytes);
-    if ( nw < 0 )
-      perror("Could not write buffer");
-    else 
+  do
+  {
+    nw = write (fd, buf + total_bytes, bytes_to_write - total_bytes);
+    if (nw < 0)
+      perror ("Could not write buffer");
+    else
       total_bytes += nw;
-  } while ( (nw >= 0) && (total_bytes < bytes_to_write) );
+  }
+  while ((nw >= 0) && (total_bytes < bytes_to_write));
 
   return total_bytes;
 }
@@ -60,30 +64,36 @@ ssize_t write_all(const int fd, const char *buf, const ssize_t bytes_to_write)
 /* 
  * pass_through: Reading from fd_in, echo all bytes to fd_out until EOF.
  */
-ssize_t pass_through(const int fd_in, const int fd_out)
+ssize_t
+pass_through (const int fd_in, const int fd_out)
 {
-  char    *buf = NULL;
+  char *buf = NULL;
   ssize_t br = 0;
   ssize_t total_bytes = 0;
 
-  buf = (char*)malloc(sizeof(char) * BUFFER_MAX);
-  if ( buf == NULL ) {
-    perror("Error from malloc");
-    abort();
+  buf = (char *) malloc (sizeof (char) * BUFFER_MAX);
+  if (buf == NULL)
+  {
+    perror ("Error from malloc");
+    abort ();
   }
 
-  do {
-    memset(buf, 0, BUFFER_MAX);
-    br = read(fd_in, buf, BUFFER_MAX);
-    if ( br > 0 ) {
-      total_bytes += write_all(fd_out, buf, br);
+  do
+  {
+    memset (buf, 0, BUFFER_MAX);
+    br = read (fd_in, buf, BUFFER_MAX);
+    if (br > 0)
+    {
+      total_bytes += write_all (fd_out, buf, br);
     }
-    else if ( br < 0 ) {
-      perror("Error reading data");
+    else if (br < 0)
+    {
+      perror ("Error reading data");
     }
-  } while ( br > 0 );
-  
-  free(buf);
+  }
+  while (br > 0);
+
+  free (buf);
 
   return total_bytes;
 }
@@ -113,30 +123,33 @@ ssize_t pass_through(const int fd_in, const int fd_out)
  * Returns strlen(src) + MIN(siz, strlen(initial dst)).
  * If retval >= siz, truncation occurred.
  */
-size_t strlcat(char *dst, const char *src, size_t siz)
+size_t
+strlcat (char *dst, const char *src, size_t siz)
 {
   char *d = dst;
   const char *s = src;
   size_t n = siz;
   size_t dlen;
-  
+
   /* Find the end of dst and adjust bytes left but don't go past end */
   while (n-- != 0 && *d != '\0')
     d++;
   dlen = d - dst;
   n = siz - dlen;
-  
+
   if (n == 0)
-    return(dlen + strlen(s));
-  while (*s != '\0') {
-    if (n != 1) {
+    return (dlen + strlen (s));
+  while (*s != '\0')
+  {
+    if (n != 1)
+    {
       *d++ = *s;
       n--;
     }
     s++;
   }
   *d = '\0';
-  
-  return(dlen + (s - src));	/* count does not include NUL */
+
+  return (dlen + (s - src));	/* count does not include NUL */
 }
 #endif /* HAVE_STRLCAT */
