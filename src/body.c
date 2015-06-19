@@ -5,7 +5,8 @@
  * could get away with letting the piped command just send to stdout.
  * For bodies though we need to know the eventual content-length (or
  * maybe even strip out the Content-Length header and just close the
- * connection if the body is very long).
+ * connection if the body is very long). The http_parser module is
+ * converting chunked encoding.
  *
  * So this command will hold both read and write ends of the pipe
  * and read the piped commands output and then send to stdout once
