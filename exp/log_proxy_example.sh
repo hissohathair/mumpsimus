@@ -8,7 +8,7 @@
 #
 
 if [ "x$1" = "x" ] ; then
-    http_proxy=10.8.0.1
+    http_proxy=proxy
 else
     http_proxy=$1
 fi
