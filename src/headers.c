@@ -78,7 +78,7 @@ cb_headers_complete (http_parser * parser)
   struct headers_settings *hset = (struct headers_settings *) parser->data;
 
   // Using a temporary string to build HTTP message start
-  char *str = malloc (LINE_MAX);
+  char *str = malloc (STRING_MAX);
   if (NULL == str)
   {
     perror ("Error in malloc");
@@ -88,13 +88,13 @@ cb_headers_complete (http_parser * parser)
   // Build the HTTP message start based on message type
   if (HTTP_REQUEST == parser->type)
   {
-    snprintf (str, BUFFER_MAX, "%s %s HTTP/%d.%d\r\n",
+    snprintf (str, STRING_MAX, "%s %s HTTP/%d.%d\r\n",
 	      http_method_str (parser->method),
 	      hset->url, parser->http_major, parser->http_minor);
   }
   else
   {
-    snprintf (str, BUFFER_MAX, "HTTP/%d.%d %d %s\r\n",
+    snprintf (str, STRING_MAX, "HTTP/%d.%d %d %s\r\n",
 	      parser->http_major,
 	      parser->http_minor, parser->status_code, hset->url);
   }
