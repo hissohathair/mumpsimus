@@ -59,9 +59,9 @@ log_data_init (struct Log_Data *log_data)
 {
   log_data->volume = 1;
 
-  log_data->url = malloc (sizeof (char) * BUFFER_MAX);
-  log_data->headers = malloc (sizeof (char) * BUFFER_MAX);
-  log_data->message = malloc (sizeof (char) * BUFFER_MAX);
+  log_data->url = malloc (URL_MAX);
+  log_data->headers = malloc (BUFFER_MAX);
+  log_data->message = malloc (STRING_MAX);
   if ((NULL == log_data->url) || (NULL == log_data->headers)
       || (NULL == log_data->message))
   {
@@ -263,7 +263,7 @@ pass_http_messages (int fd_in, int fd_out, struct Log_Data *log_data)
 
 
   // Buffer for reading from stdin
-  char *buffer = malloc (sizeof (char) * BUFFER_MAX);
+  char *buffer = malloc (BUFFER_MAX);
   if (buffer == NULL)
   {
     perror ("Error from malloc");

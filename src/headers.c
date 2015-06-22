@@ -78,7 +78,7 @@ cb_headers_complete (http_parser * parser)
   struct headers_settings *hset = (struct headers_settings *) parser->data;
 
   // Using a temporary string to build HTTP message start
-  char *str = malloc (sizeof (char) * BUFFER_MAX);
+  char *str = malloc (LINE_MAX);
   if (NULL == str)
   {
     perror ("Error in malloc");
@@ -237,7 +237,7 @@ pipe_http_messages (int fd_in, int fd_out, struct Pipe_Handle *ph)
   hset.fd_in = fd_in;
   hset.fd_out = fd_out;
   hset.fd_pipe = pipe_write_fileno (ph);
-  hset.url = malloc (sizeof (char) * URL_MAX);
+  hset.url = malloc (URL_MAX);
   hset.sbuf = stream_buffer_new ();
   hset.ph = ph;
   if (NULL == hset.url || NULL == hset.sbuf)
@@ -265,7 +265,7 @@ pipe_http_messages (int fd_in, int fd_out, struct Pipe_Handle *ph)
 
 
   // Buffer for reading data from stdin
-  char *buffer = malloc (sizeof (char) * BUFFER_MAX);
+  char *buffer = malloc (BUFFER_MAX);
   if (NULL == buffer)
   {
     perror ("Error from malloc");
@@ -423,7 +423,7 @@ main (int argc, char *argv[])
   struct Pipe_Handle *ph = pipe_handle_new ();
   if (ph == NULL)
   {
-    perror ("Error returned from malloc");
+    perror ("Error returned from pipe_handle_new");
     return EX_OSERR;
   }
 

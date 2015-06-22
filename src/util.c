@@ -71,7 +71,7 @@ pass_through (const int fd_in, const int fd_out)
   ssize_t br = 0;
   ssize_t total_bytes = 0;
 
-  buf = (char *) malloc (sizeof (char) * BUFFER_MAX);
+  buf = malloc (BUFFER_MAX);
   if (buf == NULL)
   {
     perror ("Error from malloc");

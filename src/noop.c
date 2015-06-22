@@ -25,7 +25,7 @@ main (int argc, char *argv[])
   size_t total_read = 0;
   size_t total_wrote = 0;
 
-  buf = (char *) malloc (sizeof (char) * BUFFER_MAX);
+  buf = malloc (BUFFER_MAX);
   if (buf == NULL)
   {
     perror ("Error from malloc");
