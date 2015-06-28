@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 34;
+use Test::Command tests => 40;
 use Test::More;
 
 BEGIN {
@@ -87,6 +87,11 @@ $cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "sed 's/
 like( $cmd->stdout_value, qr/^Content-Length: $expected_length/m, "Content-Length updated correctly to $expected_length" );
 like( $cmd->stdout_value, qr/^X-Mumpsimus-Original-Content-Length: $old_length/m, "Original-Length reported as $old_length" );
 
+
+# 35-40: Non-matching Content-Type should not be filtered
+$expected = qx{ cat $BODY_TEST_FILE };
+$cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "$TRANSFORM" -t xxx-no-such-type } );
+stress_test($cmd, 'body tool does not filter when content-type does not match', $expected);
 
 
 

@@ -19,6 +19,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <getopt.h>
 #include <paths.h>
 #include <stdarg.h>
@@ -53,9 +54,15 @@ struct Body_State
 {
   int fd_stdin;
   int fd_stdout;
+
   ssize_t content_length_at;
+  bool last_field_was_content_type;
+  bool do_pipe_this_message;
+
   char *url;
   char *status_line;
+  char *content_type_pattern;
+
   struct Stream_Buffer *headers;
   struct Stream_Buffer *body;
   struct Pipe_Handle *ph;
@@ -67,16 +74,25 @@ struct Body_State
  *    Initilises and allocates memory for Body_State fields. Aborts
  *    (terminates) program on malloc errors, otherwise returns void.
  */
-void
-body_state_init (struct Body_State *bstate)
+struct Body_State*
+body_state_new (const char *type_pattern)
 {
+  struct Body_State *bstate = malloc(sizeof(struct Body_State));
+
   bstate->fd_stdin = STDIN_FILENO;
   bstate->fd_stdout = STDOUT_FILENO;
   bstate->content_length_at = -1;
+  bstate->last_field_was_content_type = false;
+  bstate->do_pipe_this_message = true;
+
+  if (NULL==type_pattern)
+    bstate->content_type_pattern = NULL;
+  else
+    bstate->content_type_pattern = strdup (type_pattern);
 
   bstate->url = malloc (URL_MAX);
   bstate->status_line = malloc (LINE_MAX);
-  if ((bstate->url == NULL) || (bstate->status_line == NULL))
+  if ( (NULL==bstate->url) || (NULL==bstate->status_line) )
   {
     perror ("malloc() error initialising body state");
     abort ();
@@ -99,7 +115,7 @@ body_state_init (struct Body_State *bstate)
     abort ();
   }
 
-  return;
+  return bstate;
 }
 
 /* body_state_delete:
@@ -113,12 +129,20 @@ body_state_delete (struct Body_State *bstate)
   bstate->url = NULL;
   free (bstate->status_line);
   bstate->status_line = NULL;
+
+  if (NULL != bstate->content_type_pattern) {
+    free (bstate->content_type_pattern);
+    bstate->content_type_pattern = NULL;
+  }
+
   stream_buffer_delete (bstate->headers);
   bstate->headers = NULL;
   stream_buffer_delete (bstate->body);
   bstate->body = NULL;
   pipe_handle_delete (bstate->ph);
   bstate->ph = NULL;
+
+  free(bstate);
   return;
 }
 
@@ -185,6 +209,13 @@ cb_headers_complete (http_parser * parser)
 
   // Append blank line to end of HTTP headers.
   stream_buffer_add (bstate->headers, "\r\n", 2);
+
+  // Decide here if the body is being piped or not
+  bstate->do_pipe_this_message = true;
+  if ( NULL != bstate->content_type_pattern ) {
+    // TODO: pattern match
+    bstate->do_pipe_this_message = false;
+  }
 
   return 0;
 }
@@ -267,10 +298,11 @@ cb_header_value (http_parser * parser, const char *at, size_t length)
 /* cb_body:
  *
  *    Called each time a chunk of the body has been read by the
- *    parser.  We will write this to the pipe write end. The main
- *    parser loop will periodically poll the read end to make
- *    sure the piped command doesn't block on write because its
- *    output buffers are full.
+ *    parser.  We will write this to the pipe write end. 
+ *
+ *    TODO: The main parser loop will periodically poll the read end
+ *    to make sure the piped command doesn't block on write because
+ *    its output buffers are full.
  */
 int
 cb_body (http_parser * parser, const char *at, size_t length)
@@ -369,21 +401,24 @@ cb_message_complete (http_parser * parser)
 
 /* pipe_http_messages:
  *
- *     Want to read from stdin ---> send it to pipe's stdin.  Read
- *     from pipe's stdout ---> send it to my stdout.
+ *    Want to read from stdin ---> send it to pipe's stdin.  Read
+ *    from pipe's stdout ---> send it to my stdout.
+ *
+ *    pipe_cmd      Shell command to open pipe to
+ *    type_pattern  If not NULL, matched against Content-Type. Only
+ *                  messages that match are sent to pipe_cmd.
  */
 int
-pipe_http_messages (int fd_in, int fd_out, const char *pipe_cmd)
+pipe_http_messages (int fd_in, int fd_out, const char *pipe_cmd, const char *type_pattern)
 {
   int errors = 0;
   int rc = EX_OK;
 
 
   // This struct will hold inforamtion we need on each callback
-  struct Body_State bstate;
-  body_state_init (&bstate);
-  bstate.fd_stdin = fd_in;
-  bstate.fd_stdout = fd_out;
+  struct Body_State *bstate = body_state_new (type_pattern);
+  bstate->fd_stdin = fd_in;
+  bstate->fd_stdout = fd_out;
 
   // This struct sets up callbacks for the HTTP parser
   http_parser_settings settings;
@@ -399,11 +434,11 @@ pipe_http_messages (int fd_in, int fd_out, const char *pipe_cmd)
   // Initialise a new HTTP parser
   http_parser parser;
   http_parser_init (&parser, HTTP_BOTH);
-  parser.data = (void *) &bstate;
+  parser.data = (void *) bstate;
 
 
   // Now need to open pipe command 
-  if (pipe_open2 (bstate.ph, pipe_cmd) != 0)
+  if (pipe_open2 (bstate->ph, pipe_cmd) != 0)
   {
     ulog (LOG_ERR, "Unable to open pipe to command: %s", pipe_cmd);
     return -1;
@@ -482,7 +517,7 @@ pipe_http_messages (int fd_in, int fd_out, const char *pipe_cmd)
 
   // We allocated these
   free (buffer);
-  body_state_delete (&bstate);
+  body_state_delete (bstate);
 
   if (errors > 0)
     rc = EX_IOERR;
@@ -519,12 +554,13 @@ main (int argc, char *argv[])
 {
   int rc = EX_OK;		// Exit code to return to environment
   char *pipe_cmd = NULL;	// Pointer to command line to pipe output through
+  char *type_pattern = NULL;    // Pointer to MIME type glob pattern
 
   // TODO: Maybe add option to only do requests or responses?
 
   // Process command line arguments
   int c = 0;
-  while ((c = getopt (argc, argv, "c:")) != -1)
+  while ((c = getopt (argc, argv, "t:c:")) != -1)
   {
     switch (c)
     {
@@ -532,6 +568,11 @@ main (int argc, char *argv[])
       if (NULL == optarg)
 	usage (argv[0], "Must pass a command to -c");
       pipe_cmd = optarg;
+      break;
+    case 't':
+      if (NULL == optarg)
+	usage (argv[0], "Must pass a type pattern to -t");
+      type_pattern = optarg;
       break;
     case '?':
       usage (argv[0], NULL);
@@ -556,9 +597,11 @@ main (int argc, char *argv[])
   // Initialise logging tool and begin debug log message
   ulog_init (argv[0]);
   ulog (LOG_INFO, "Piping all HTTP message bodies through %s", pipe_cmd);
+  if (NULL != type_pattern)
+    ulog (LOG_INFO, "Matching Content-Type against %s", type_pattern);
 
   // Call main program loop
-  rc = pipe_http_messages (STDIN_FILENO, STDOUT_FILENO, pipe_cmd);
+  rc = pipe_http_messages (STDIN_FILENO, STDOUT_FILENO, pipe_cmd, type_pattern);
 
   ulog_close ();
 
