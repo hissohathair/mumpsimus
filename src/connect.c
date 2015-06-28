@@ -4,7 +4,8 @@
  ************************************************************************/
 #include <curl/curl.h>
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   CURLcode ret;
   CURL *hnd;
@@ -12,7 +13,8 @@ int main(int argc, char *argv[])
 
   slist1 = NULL;
   slist1 = curl_slist_append(slist1, "Host: google.com");
-  slist1 = curl_slist_append(slist1, "X-Mumpsimus-Original-Host: www.google.com");
+  slist1 =
+    curl_slist_append(slist1, "X-Mumpsimus-Original-Host: www.google.com");
 
   hnd = curl_easy_init();
   curl_easy_setopt(hnd, CURLOPT_URL, "http://www.google.com");
@@ -29,18 +31,18 @@ int main(int argc, char *argv[])
      as source easily. You may select to either not use them or implement
      them yourself.
 
-  CURLOPT_WRITEDATA set to a objectpointer
-  CURLOPT_WRITEFUNCTION set to a functionpointer
-  CURLOPT_READDATA set to a objectpointer
-  CURLOPT_READFUNCTION set to a functionpointer
-  CURLOPT_SEEKDATA set to a objectpointer
-  CURLOPT_SEEKFUNCTION set to a functionpointer
-  CURLOPT_ERRORBUFFER set to a objectpointer
-  CURLOPT_STDERR set to a objectpointer
-  CURLOPT_HEADERFUNCTION set to a functionpointer
-  CURLOPT_HEADERDATA set to a objectpointer
+     CURLOPT_WRITEDATA set to a objectpointer
+     CURLOPT_WRITEFUNCTION set to a functionpointer
+     CURLOPT_READDATA set to a objectpointer
+     CURLOPT_READFUNCTION set to a functionpointer
+     CURLOPT_SEEKDATA set to a objectpointer
+     CURLOPT_SEEKFUNCTION set to a functionpointer
+     CURLOPT_ERRORBUFFER set to a objectpointer
+     CURLOPT_STDERR set to a objectpointer
+     CURLOPT_HEADERFUNCTION set to a functionpointer
+     CURLOPT_HEADERDATA set to a objectpointer
 
-  */
+   */
 
   ret = curl_easy_perform(hnd);
 
@@ -49,6 +51,7 @@ int main(int argc, char *argv[])
   curl_slist_free_all(slist1);
   slist1 = NULL;
 
-  return (int)ret;
+  return (int) ret;
 }
+
 /**** End of sample code ****/
