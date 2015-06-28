@@ -24,15 +24,15 @@ struct Pipe_Handle
 };
 
 
-struct Pipe_Handle *pipe_handle_new (void);
-void pipe_handle_delete (struct Pipe_Handle *ph);
-int pipe_open (struct Pipe_Handle *ph, const char *pipe_cmd);
-int pipe_open2 (struct Pipe_Handle *ph, const char *pipe_cmd);
-int pipe_close (struct Pipe_Handle *ph);
-int pipe_reset (struct Pipe_Handle *ph);
-void pipe_send_eof (struct Pipe_Handle *ph);
-int pipe_write_fileno (struct Pipe_Handle *ph);
-int pipe_read_fileno (struct Pipe_Handle *ph);
+struct Pipe_Handle *pipe_handle_new(void);
+void pipe_handle_delete(struct Pipe_Handle *ph);
+int pipe_open(struct Pipe_Handle *ph, const char *pipe_cmd);
+int pipe_open2(struct Pipe_Handle *ph, const char *pipe_cmd);
+int pipe_close(struct Pipe_Handle *ph);
+int pipe_reset(struct Pipe_Handle *ph);
+void pipe_send_eof(struct Pipe_Handle *ph);
+int pipe_write_fileno(struct Pipe_Handle *ph);
+int pipe_read_fileno(struct Pipe_Handle *ph);
 
 
 #endif /* __PIPES_H__ */

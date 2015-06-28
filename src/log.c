@@ -25,10 +25,10 @@
  *    print usage message and abort. Does not return.
  */
 void
-usage (const char *ident)
+usage(const char *ident)
 {
-  fprintf (stderr, "usage: %s [-qv]\n\t-q\tquiet\n\t-v\tverbose\n", ident);
-  exit (EX_USAGE);
+  fprintf(stderr, "usage: %s [-qv]\n\t-q\tquiet\n\t-v\tverbose\n", ident);
+  exit(EX_USAGE);
 }
 
 
@@ -55,30 +55,30 @@ struct Log_Data
 };
 
 void
-log_data_init (struct Log_Data *log_data)
+log_data_init(struct Log_Data *log_data)
 {
   log_data->volume = 1;
 
-  log_data->url = malloc (URL_MAX);
-  log_data->headers = malloc (BUFFER_MAX);
-  log_data->message = malloc (STRING_MAX);
+  log_data->url = malloc(URL_MAX);
+  log_data->headers = malloc(BUFFER_MAX);
+  log_data->message = malloc(STRING_MAX);
   if ((NULL == log_data->url) || (NULL == log_data->headers)
       || (NULL == log_data->message))
-  {
-    perror ("Error from malloc");
-    abort ();
-  }
+    {
+      perror("Error from malloc");
+      abort();
+    }
   log_data->url[0] = '\0';
   log_data->headers[0] = '\0';
   return;
 }
 
 void
-log_data_free (struct Log_Data *log_data)
+log_data_free(struct Log_Data *log_data)
 {
-  free (log_data->url);
-  free (log_data->headers);
-  free (log_data->message);
+  free(log_data->url);
+  free(log_data->headers);
+  free(log_data->message);
   log_data->url = NULL;
   log_data->headers = NULL;
   return;
@@ -97,17 +97,17 @@ log_data_free (struct Log_Data *log_data)
  *    want...? 
  */
 void
-log_highlight (FILE * outf, const int turn_highlight_on)
+log_highlight(FILE * outf, const int turn_highlight_on)
 {
-  if (getenv ("TERM") == NULL)
+  if (getenv("TERM") == NULL)
     return;
-  if (strstr (getenv ("TERM"), "color") == NULL)
+  if (strstr(getenv("TERM"), "color") == NULL)
     return;
 
   if (turn_highlight_on)
-    fprintf (outf, "%c[1;32m", 27);	// green
+    fprintf(outf, "%c[1;32m", 27);	// green
   else
-    fprintf (outf, "%c[0m", 27);	// white
+    fprintf(outf, "%c[0m", 27);	// white
 }
 
 
@@ -117,50 +117,50 @@ log_highlight (FILE * outf, const int turn_highlight_on)
  *    processed. A good time to extract some relevant log information.
  */
 int
-cb_log_message_complete (http_parser * parser)
+cb_log_message_complete(http_parser * parser)
 {
   struct Log_Data *log_data = (struct Log_Data *) parser->data;
   char *str = log_data->message;
 
   // Build log message
   if (0 == parser->type)
-  {
-    snprintf (str, BUFFER_MAX, "[req] %s %s HTTP/%d.%d",
-	      http_method_str (parser->method),
-	      ((log_data->url == NULL
-		|| !log_data->url[0]) ? "unknown" : log_data->url),
-	      parser->http_major, parser->http_minor);
-  }
+    {
+      snprintf(str, BUFFER_MAX, "[req] %s %s HTTP/%d.%d",
+	       http_method_str(parser->method),
+	       ((log_data->url == NULL
+		 || !log_data->url[0]) ? "unknown" : log_data->url),
+	       parser->http_major, parser->http_minor);
+    }
   else
-  {
-    snprintf (str, BUFFER_MAX, "[res] HTTP/%d.%d %d %s",
-	      parser->http_major,
-	      parser->http_minor,
-	      parser->status_code,
-	      ((log_data->url == NULL
-		|| !log_data->url[0]) ? "unknown" : log_data->url));
-  }
+    {
+      snprintf(str, BUFFER_MAX, "[res] HTTP/%d.%d %d %s",
+	       parser->http_major,
+	       parser->http_minor,
+	       parser->status_code,
+	       ((log_data->url == NULL
+		 || !log_data->url[0]) ? "unknown" : log_data->url));
+    }
 
   // Quiet (volume == 1) means log message type and basic status
-  ulog (LOG_INFO, "cb_log_message_complete: %s (nread=%zd)", str,
-	parser->nread);
+  ulog(LOG_INFO, "cb_log_message_complete: %s (nread=%zd)", str,
+       parser->nread);
   if (log_data->volume > 0)
-  {
-    log_highlight (stderr, 1);
-    fprintf (stderr, "%s: %s\n", __FILE__, str);
-    log_highlight (stderr, 0);
-  }
+    {
+      log_highlight(stderr, 1);
+      fprintf(stderr, "%s: %s\n", __FILE__, str);
+      log_highlight(stderr, 0);
+    }
 
   // Verbose (volume == 2) means log whole headers
   if (log_data->volume > 1)
-    fprintf (stderr, "%s: [begin headers]\n%s%s: [end headers]\n", __FILE__,
-	     log_data->headers, __FILE__);
+    fprintf(stderr, "%s: [begin headers]\n%s%s: [end headers]\n", __FILE__,
+	    log_data->headers, __FILE__);
 
   // Don't need these any more
   log_data->headers[0] = '\0';
 
   // Restart parser for next message type
-  http_parser_init (parser, HTTP_BOTH);
+  http_parser_init(parser, HTTP_BOTH);
 
   return 0;
 }
@@ -172,11 +172,11 @@ cb_log_message_complete (http_parser * parser)
  *    URL for later.
  */
 int
-cb_log_url (http_parser * parser, const char *at, size_t length)
+cb_log_url(http_parser * parser, const char *at, size_t length)
 {
   struct Log_Data *log_data = (struct Log_Data *) parser->data;
   size_t copylen = (length < BUFFER_MAX ? length : BUFFER_MAX);
-  strncpy (log_data->url, at, copylen);
+  strncpy(log_data->url, at, copylen);
   log_data->url[copylen] = '\0';
   return 0;
 }
@@ -188,15 +188,15 @@ cb_log_url (http_parser * parser, const char *at, size_t length)
  *    this to our own buffer for later logging.
  */
 int
-cb_log_header_field (http_parser * parser, const char *at, size_t length)
+cb_log_header_field(http_parser * parser, const char *at, size_t length)
 {
   struct Log_Data *log_data = (struct Log_Data *) parser->data;
 
-  char *new_field = strndup (at, length);
-  strlcat (log_data->headers, "\t", BUFFER_MAX);
-  strlcat (log_data->headers, new_field, BUFFER_MAX);
-  strlcat (log_data->headers, ": ", BUFFER_MAX);
-  free (new_field);
+  char *new_field = strndup(at, length);
+  strlcat(log_data->headers, "\t", BUFFER_MAX);
+  strlcat(log_data->headers, new_field, BUFFER_MAX);
+  strlcat(log_data->headers, ": ", BUFFER_MAX);
+  free(new_field);
   return 0;
 }
 
@@ -207,14 +207,14 @@ cb_log_header_field (http_parser * parser, const char *at, size_t length)
  *    read. Adds this to our own buffer for later logging.
  */
 int
-cb_log_header_value (http_parser * parser, const char *at, size_t length)
+cb_log_header_value(http_parser * parser, const char *at, size_t length)
 {
   struct Log_Data *log_data = (struct Log_Data *) parser->data;
 
-  char *new_value = strndup (at, length);
-  strlcat (log_data->headers, new_value, BUFFER_MAX);
-  strlcat (log_data->headers, "\r\n", BUFFER_MAX);
-  free (new_value);
+  char *new_value = strndup(at, length);
+  strlcat(log_data->headers, new_value, BUFFER_MAX);
+  strlcat(log_data->headers, "\r\n", BUFFER_MAX);
+  free(new_value);
   return 0;
 }
 
@@ -225,10 +225,10 @@ cb_log_header_value (http_parser * parser, const char *at, size_t length)
  *    very interesting to do here except report the bytes.
  */
 int
-cb_log_body (http_parser * parser, const char *at, size_t length)
+cb_log_body(http_parser * parser, const char *at, size_t length)
 {
   //struct Log_Data *log_data = (struct Log_Data*)parser->data;
-  ulog_debug ("cb_log_body called (len=%zd)", length);
+  ulog_debug("cb_log_body called (len=%zd)", length);
   return 0;
 }
 
@@ -239,111 +239,112 @@ cb_log_body (http_parser * parser, const char *at, size_t length)
  *    messages about the HTTP header being consumed.
  */
 int
-pass_http_messages (int fd_in, int fd_out, struct Log_Data *log_data)
+pass_http_messages(int fd_in, int fd_out, struct Log_Data *log_data)
 {
   int rc = 0;
   int errors = 0;
 
   // Struct holds the callback settings for the parser
   http_parser_settings settings;
-  http_parser_settings_init (&settings);
+  http_parser_settings_init(&settings);
   settings.on_url = cb_log_url;
   settings.on_message_complete = cb_log_message_complete;
   settings.on_body = cb_log_body;
   if (log_data->volume > 1)
-  {
-    settings.on_header_field = cb_log_header_field;
-    settings.on_header_value = cb_log_header_value;
-  }
+    {
+      settings.on_header_field = cb_log_header_field;
+      settings.on_header_value = cb_log_header_value;
+    }
 
   // Struct holds parser instance, including our callback data
   http_parser parser;
-  http_parser_init (&parser, HTTP_BOTH);
+  http_parser_init(&parser, HTTP_BOTH);
   parser.data = (void *) log_data;
 
 
   // Buffer for reading from stdin
-  char *buffer = malloc (BUFFER_MAX);
+  char *buffer = malloc(BUFFER_MAX);
   if (buffer == NULL)
-  {
-    perror ("Error from malloc");
-    abort ();
-  }
+    {
+      perror("Error from malloc");
+      abort();
+    }
 
   ssize_t last_parsed = 0;
   ssize_t bytes_read = 0;
   char *buf_ptr = buffer;
   bool do_reads = true;
   do
-  {
-    // Read data from stdin
-    memset (buffer, 0, BUFFER_MAX);
-    buf_ptr = buffer;
-    bytes_read = read (fd_in, buffer, BUFFER_MAX);
-    ulog (LOG_DEBUG, "Read %zd bytes from fd=%d", bytes_read, fd_in);
-
-    // Handle error or eof
-    if (bytes_read < 0)
     {
-      errors++;
-      do_reads = false;
-      ulog (LOG_ERR, "Read returned error %d (%s)", errno, strerror (errno));
-    }
-    else if (0 == bytes_read)
-    {
-      // let http parser know we are done
-      last_parsed = http_parser_execute (&parser, &settings, buf_ptr, 0);
-      ulog (LOG_DEBUG, "Read returned EOF. Have told parser.");
-      do_reads = false;
-    }
-    else
-    {
-      // Repeatedly call http_parser_execute while there is data left in the buffer
-      while ((bytes_read > 0) && (errors <= 0))
-      {
+      // Read data from stdin
+      memset(buffer, 0, BUFFER_MAX);
+      buf_ptr = buffer;
+      bytes_read = read(fd_in, buffer, BUFFER_MAX);
+      ulog(LOG_DEBUG, "Read %zd bytes from fd=%d", bytes_read, fd_in);
 
-	// We always echo to stdout directly what we've read
-	write_all (fd_out, buffer, bytes_read);
-	ulog (LOG_DEBUG, "Wrote %zd bytes to fd=%d", bytes_read, fd_out);
-
-	// Call parser
-	last_parsed =
-	  http_parser_execute (&parser, &settings, buf_ptr, bytes_read);
-	ulog (LOG_DEBUG, "Parsed %zd bytes from %zd\n", last_parsed,
-	      bytes_read);
-
-	// TODO: Have to handle connection upgrade
-	if (parser.upgrade)
+      // Handle error or eof
+      if (bytes_read < 0)
 	{
-	  ulog (LOG_ERR,
-		"Parser requested HTTP connection upgrade but that's not implemented yet!");
 	  errors++;
+	  do_reads = false;
+	  ulog(LOG_ERR, "Read returned error %d (%s)", errno,
+	       strerror(errno));
 	}
-	else if (last_parsed > 0)
+      else if (0 == bytes_read)
 	{
-	  // Some data was parsed. Advance buffer.
-	  bytes_read -= last_parsed;
-	  buf_ptr += last_parsed;
+	  // let http parser know we are done
+	  last_parsed = http_parser_execute(&parser, &settings, buf_ptr, 0);
+	  ulog(LOG_DEBUG, "Read returned EOF. Have told parser.");
+	  do_reads = false;
 	}
-	else
+      else
 	{
-	  // Parser returned an error condition
-	  errors++;
-	  ulog (LOG_ERR,
-		"Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)",
-		parser.type,
-		http_errno_description (HTTP_PARSER_ERRNO (&parser)),
-		http_errno_name (HTTP_PARSER_ERRNO (&parser)), *buf_ptr,
-		*buf_ptr);
-	  rc = EX_IOERR;
-	}
-      }				// while (bytes_read > 0) && (errors <= 0)
-    }				// if...else
-  }
+	  // Repeatedly call http_parser_execute while there is data left in the buffer
+	  while ((bytes_read > 0) && (errors <= 0))
+	    {
+
+	      // We always echo to stdout directly what we've read
+	      write_all(fd_out, buffer, bytes_read);
+	      ulog(LOG_DEBUG, "Wrote %zd bytes to fd=%d", bytes_read, fd_out);
+
+	      // Call parser
+	      last_parsed =
+		http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
+	      ulog(LOG_DEBUG, "Parsed %zd bytes from %zd\n", last_parsed,
+		   bytes_read);
+
+	      // TODO: Have to handle connection upgrade
+	      if (parser.upgrade)
+		{
+		  ulog(LOG_ERR,
+		       "Parser requested HTTP connection upgrade but that's not implemented yet!");
+		  errors++;
+		}
+	      else if (last_parsed > 0)
+		{
+		  // Some data was parsed. Advance buffer.
+		  bytes_read -= last_parsed;
+		  buf_ptr += last_parsed;
+		}
+	      else
+		{
+		  // Parser returned an error condition
+		  errors++;
+		  ulog(LOG_ERR,
+		       "Parser error reading HTTP stream type %d: %s (%s). Next char is %c (%d)",
+		       parser.type,
+		       http_errno_description(HTTP_PARSER_ERRNO(&parser)),
+		       http_errno_name(HTTP_PARSER_ERRNO(&parser)), *buf_ptr,
+		       *buf_ptr);
+		  rc = EX_IOERR;
+		}
+	    }			// while (bytes_read > 0) && (errors <= 0)
+	}			// if...else
+    }
   while (do_reads && (errors <= 0));
 
   // We allocated these
-  free (buffer);
+  free(buffer);
 
   return rc;
 }
@@ -355,34 +356,34 @@ pass_http_messages (int fd_in, int fd_out, struct Log_Data *log_data)
  *    if all OK, otherwise non-zero on parsing or other error.
  */
 int
-main (int argc, char *argv[])
+main(int argc, char *argv[])
 {
   struct Log_Data log_data;
-  log_data_init (&log_data);
+  log_data_init(&log_data);
 
   // Process command line arguments
   int c = 0;
-  while ((c = getopt (argc, argv, "qv")) != -1)
-  {
-    switch (c)
+  while ((c = getopt(argc, argv, "qv")) != -1)
     {
-    case 'q':
-      log_data.volume = 0;
-      break;
-    case 'v':
-      log_data.volume = 2;
-      break;
-    default:
-      usage (argv[0]);
+      switch (c)
+	{
+	case 'q':
+	  log_data.volume = 0;
+	  break;
+	case 'v':
+	  log_data.volume = 2;
+	  break;
+	default:
+	  usage(argv[0]);
+	}
     }
-  }
 
-  ulog_init (argv[0]);
+  ulog_init(argv[0]);
 
-  int rc = pass_http_messages (STDIN_FILENO, STDOUT_FILENO, &log_data);
+  int rc = pass_http_messages(STDIN_FILENO, STDOUT_FILENO, &log_data);
 
-  log_data_free (&log_data);
-  ulog_close ();
+  log_data_free(&log_data);
+  ulog_close();
 
   return rc;
 }

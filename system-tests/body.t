@@ -5,7 +5,7 @@ use strict;
 
 use lib './lib', './system-tests/lib';
 
-use Test::Command tests => 34;
+use Test::Command tests => 46;
 use Test::More;
 
 BEGIN {
@@ -15,79 +15,116 @@ BEGIN {
 
 my $COMMAND = 'body';
 my $TRANSFORM = "tr '[:lower:]' '[:upper:]'";
+my $REMOVE_MUMPS_HEADS = "egrep -v '^X-Mumpsimus'";
 
 my @SEARCH_DIR = ( 'test-data', 'system-tests/test-data' );
 
 my $HEAD_TEST_FILE = qx{ find @SEARCH_DIR -name sample-request-get.txt 2>/dev/null };   chomp($HEAD_TEST_FILE);
 my $BODY_TEST_FILE = qx{ find @SEARCH_DIR -name sample-response-302.txt 2>/dev/null };  chomp($BODY_TEST_FILE);
 my @TEST_FILES = ( $HEAD_TEST_FILE, $BODY_TEST_FILE );
-
+my @DOUBLE_TEST_FILES = (@TEST_FILES, @TEST_FILES);
 
 
 # 1-6: Headers left alone test (test file has header only)
-my $expected_req = qx{ cat $HEAD_TEST_FILE | egrep -v '^X-Mumpsimus' };
-my $cmd = Test::Command->new( cmd => qq{ $COMMAND -c "$TRANSFORM" < $HEAD_TEST_FILE  }  );
-stress_test($cmd, 'HTTP request TR test', $expected_req);
+do {
+    my $expected = qx{ cat $HEAD_TEST_FILE };
+    my $cmd = Test::Command->new( cmd => qq{ $COMMAND -c "$TRANSFORM" < $HEAD_TEST_FILE  }  );
+    stress_test($cmd, 'HTTP request TR test', $expected);
+};
 
 # 7-12: Headers left alone (test file has response body)
-my $expected_res = qx{ cat $BODY_TEST_FILE };
-if ( $expected_res =~ m/(.*)\r\n\r\n(.*)/sg ) {
-    $expected_res = $1 . "\r\n\r\n" . uc($2);
-}
+do {
+    my $expected = qx{ cat $BODY_TEST_FILE };
+    if ( $expected =~ m/(.*)\r\n\r\n(.*)/sg ) {
+	$expected = $1 . "\r\n\r\n" . uc($2);
+    }
 
-$cmd = Test::Command->new( cmd => qq{ $COMMAND -c "$TRANSFORM" < $BODY_TEST_FILE | egrep -v '^X-Mumpsimus' } );
-stress_test($cmd, 'HTTP response TR test', $expected_res);
+    my $cmd = Test::Command->new( cmd => qq{ $COMMAND -c "$TRANSFORM" < $BODY_TEST_FILE | $REMOVE_MUMPS_HEADS } );
+    stress_test($cmd, 'HTTP response TR test', $expected);
+};
 
 # 13-18: Now testing HTTP streams (request, response)
-my $expected_noop = qx{ cat @TEST_FILES }; 
-
-$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c noop | egrep -v '^X-Mumpsimus'} );
-stress_test($cmd, 'HTTP req/res NOOP test', $expected_noop);
+do {
+    my $expected = qx{ cat @TEST_FILES }; 
+    my $cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c noop | $REMOVE_MUMPS_HEADS } );
+    stress_test($cmd, 'HTTP req/res NOOP test', $expected);
+};
 
 # 19-24: Now test a longer HTTP stream (req, res, req, res)
-push @TEST_FILES, @TEST_FILES;
-$expected_noop = qx{ cat @TEST_FILES };
-
-$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c noop | egrep -v '^X-Mumpsimus'} );
-stress_test($cmd, 'HTTP req/res x 2 NOOP test', $expected_noop);
-
+do {
+    my $expected = qx{ cat @DOUBLE_TEST_FILES };
+    my $cmd = Test::Command->new( cmd => qq{ cat @DOUBLE_TEST_FILES | $COMMAND -c noop | $REMOVE_MUMPS_HEADS } );
+    stress_test($cmd, 'HTTP req/res x 2 NOOP test', $expected);
+};
 
 # 25-30: Now test the longer HTTP stream with a body transform
-my $expected = $expected_req . $expected_res . $expected_req . $expected_res;
+do {
+    my $expected_req = qx{ cat $HEAD_TEST_FILE };
+    my $expected_res = qx{ cat $BODY_TEST_FILE };
+    if ( $expected_res =~ m/(.*)\r\n\r\n(.*)/sg ) {
+	$expected_res = $1 . "\r\n\r\n" . uc($2);
+    }
+    my $expected = $expected_req . $expected_res . $expected_req . $expected_res;
 
-$cmd = Test::Command->new( cmd => qq{ cat @TEST_FILES | $COMMAND -c "$TRANSFORM" | egrep -v '^X-Mumpsimus'} );
-stress_test($cmd, 'HTTP req/res x 2 TR test', $expected);
-
+    my $cmd = Test::Command->new( cmd => qq{ cat @DOUBLE_TEST_FILES | $COMMAND -c "$TRANSFORM" | $REMOVE_MUMPS_HEADS } );
+    stress_test($cmd, 'HTTP req/res x 2 TR test', $expected);
+};
 
 # 31-32: Test for a body transformation that LENGTHENS the body
-$expected_res = qx{ cat $BODY_TEST_FILE };
-my ($expected_length, $old_length);
-if ( $expected_res =~ m/(.*)\r\n\r\n(.*)/sg ) {
-    my ($head, $body) = ($1, $2);
-    $old_length = length($body);
-    $body =~ s/moved/moves babe/;
-    $expected_length = length($body);
-}
+do {
+    my $expected = qx{ cat $BODY_TEST_FILE };
+    my ($expected_length, $old_length);
+    if ( $expected =~ m/(.*)\r\n\r\n(.*)/sg ) {
+	my ($head, $body) = ($1, $2);
+	$old_length = length($body);
+	$body =~ s/moved/moves babe/;
+	$expected_length = length($body);
+    }
 
-$cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "sed 's/moved/moves babe/'" } );
-like( $cmd->stdout_value, qr/^Content-Length: $expected_length/m, "Content-Length updated correctly to $expected_length" );
-like( $cmd->stdout_value, qr/^X-Mumpsimus-Original-Content-Length: $old_length/m, "Original-Length reported as $old_length" );
+    my $cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "sed 's/moved/moves babe/'" } );
+    like( $cmd->stdout_value, qr/^Content-Length: $expected_length/m, 
+	  "Content-Length updated correctly to $expected_length" );
+    like( $cmd->stdout_value, qr/^X-Mumpsimus-Original-Content-Length: $old_length/m, 
+	  "Original-Length reported as $old_length" );
+};
 
 
 # 33-34: Test for a body transformation that SHORTENS the body
-$expected_res = qx{ cat $BODY_TEST_FILE };
-if ( $expected_res =~ m/(.*)\r\n\r\n(.*)/sg ) {
-    my ($head, $body) = ($1, $2);
-    $old_length = length($body);
-    $body =~ s/moved//;
-    $expected_length = length($body);
-}
+do {
+    my $expected = qx{ cat $BODY_TEST_FILE };
+    my ($expected_length, $old_length);
+    if ( $expected =~ m/(.*)\r\n\r\n(.*)/sg ) {
+	my ($head, $body) = ($1, $2);
+	$old_length = length($body);
+	$body =~ s/moved//;
+	$expected_length = length($body);
+    }
 
-$cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "sed 's/moved//'" } );
-like( $cmd->stdout_value, qr/^Content-Length: $expected_length/m, "Content-Length updated correctly to $expected_length" );
-like( $cmd->stdout_value, qr/^X-Mumpsimus-Original-Content-Length: $old_length/m, "Original-Length reported as $old_length" );
+    my $cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "sed 's/moved//'" } );
+    like( $cmd->stdout_value, qr/^Content-Length: $expected_length/m, 
+	  "Content-Length updated correctly to $expected_length" );
+    like( $cmd->stdout_value, qr/^X-Mumpsimus-Original-Content-Length: $old_length/m, 
+	  "Original-Length reported as $old_length" );
+};
 
 
+# 35-40: Non-matching Content-Type should not be filtered
+do {
+    my $expected = qx{ cat $BODY_TEST_FILE };
+    my $cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "$TRANSFORM" -t xxx-no-such-type } );
+    stress_test($cmd, 'body tool does not filter when content-type does not match', $expected);
+};
+
+
+# 41-46: Matching Content-Type IS filtered
+do {
+    my $expected = qx{ cat $BODY_TEST_FILE };
+    if ( $expected =~ m/(.*)\r\n\r\n(.*)/sg ) {
+	$expected = $1 . "\r\n\r\n" . uc($2);
+    }
+    my $cmd = Test::Command->new( cmd => qq{ cat $BODY_TEST_FILE | $COMMAND -c "$TRANSFORM" -t "text/html*" | $REMOVE_MUMPS_HEADS } );
+    stress_test($cmd, 'body tool DOES filter when content-type matches', $expected);
+};
 
 
 # stress_test: 6 tests

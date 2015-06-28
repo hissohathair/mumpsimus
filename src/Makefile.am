@@ -18,3 +18,6 @@ dup$(EXEEXT): noop$(EXEEXT)
 
 clean-local:
 	$(RM) -f null$(EXEEXT) dup$(EXEEXT)
+
+indent:
+	 indent -gnu -npcs *.c *.h
