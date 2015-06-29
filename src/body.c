@@ -14,6 +14,8 @@
  *
  */
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -355,7 +357,7 @@ cb_body(http_parser * parser, const char *at, size_t length)
       // write headers if haven't already
       if (stream_buffer_size(bstate->headers) > 0) 
 	{
-	  write(fd, bstate->status_line, strlen(bstate->status_line));
+	  write_all(fd, bstate->status_line, strlen(bstate->status_line));
 	  stream_buffer_write(bstate->headers, fd);
 	}
     }
@@ -424,7 +426,7 @@ cb_message_complete(http_parser * parser)
 
       // Output HTTP status message
       ulog_debug("Body length is %zd", body_length);
-      write(bstate->fd_stdout, bstate->status_line,
+      write_all(bstate->fd_stdout, bstate->status_line,
 	    strlen(bstate->status_line));
       
       if (bstate->content_length_at >= 0)
@@ -435,7 +437,7 @@ cb_message_complete(http_parser * parser)
 	  snprintf(buffer, BUFFER_MAX,
 		   "Content-Length: %zd\r\nX-Mumpsimus-Original-",
 		   body_length);
-	  write(bstate->fd_stdout, buffer, strlen(buffer));
+	  write_all(bstate->fd_stdout, buffer, strlen(buffer));
 
 	  // Rest of headers buffer already includes blank line
 	  stream_buffer_write(bstate->headers, bstate->fd_stdout);

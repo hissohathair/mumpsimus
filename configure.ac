@@ -12,6 +12,7 @@ AC_CONFIG_FILES([Makefile src/Makefile unit-tests/Makefile system-tests/Makefile
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
 # Checks for programs.
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_CC_C99
 AX_CFLAGS_WARN_ALL
