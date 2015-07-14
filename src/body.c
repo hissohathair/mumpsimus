@@ -560,7 +560,12 @@ pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd,
 	      ulog_debug("Parsed %zd bytes out of %zd bytes remaining",
 			 last_parsed, bytes_read);
 
-	      if (last_parsed > 0)
+	      if (parser->upgrade) // TODO: support this properly
+		{
+		  ulog(LOG_ERR, "HTTP Upgrade protocol invoked -- feature not supported");
+		  errors++;
+		}
+	      else if (last_parsed > 0)
 		{
 		  // Some data was parsed. Advance to next part of buffer
 		  bytes_read -= last_parsed;
