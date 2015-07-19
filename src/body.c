@@ -541,8 +541,7 @@ pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd,
 	{
 	  errors++;
 	  do_reads = false;
-	  ulog(LOG_ERR, "Read returned error %d (%s)", errno,
-	       strerror(errno));
+	  ulog(LOG_ERR, "Read returned error %d (%s)", errno, strerror(errno));
 	}
       else if (0 == bytes_read)
 	{
@@ -559,8 +558,7 @@ pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd,
 
 	      last_parsed =
 		http_parser_execute(&parser, &settings, buf_ptr, bytes_read);
-	      ulog_debug("Parsed %zd bytes out of %zd bytes remaining",
-			 last_parsed, bytes_read);
+	      ulog_debug("Parsed %zd bytes out of %zd bytes remaining", last_parsed, bytes_read);
 
 	      if (parser.upgrade) // TODO: support this properly
 		{

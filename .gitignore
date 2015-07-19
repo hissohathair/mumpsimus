@@ -26,7 +26,7 @@ README_NEW.md
 /src/dup
 /src/body
 /src/headers
-/src/headers.OLD.c
+/src/connect
 /unit-tests/check_stream_buffer
 /unit-tests/check_util
 /unit-tests/check_pipes
@@ -66,6 +66,7 @@ app.info
 coverage_report
 *.log
 *.trs
+/build-aux/compile
 
 # Perl build
 _build

@@ -9,6 +9,10 @@
 # print the response on stdout.
 #
 
+BEGIN {
+    unshift @INC, './blib', './lib';
+}
+
 use warnings;
 use strict;
 
