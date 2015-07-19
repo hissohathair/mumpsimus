@@ -114,6 +114,9 @@ Available
 * log -- print log messages on stderr
 * headers -- pipe HTTP header through another command before passing
   it along
+* body -- pipe HTTP message bodies through another command before
+  passing it along. Re-calculates Content-Length header. Generally
+  speaking, chunked encoding is decoded.
 
 For testing only:
 

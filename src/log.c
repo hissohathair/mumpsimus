@@ -2,8 +2,11 @@
  * log.c -- print out features of a HTTP stream from stdin and report
  * on stderr.
  *
- * Not working yet. :)
  */
+
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
 
 #include <errno.h>
 #include <stdbool.h>
@@ -17,7 +20,13 @@
 #include "util.h"
 #include "http_parser.h"
 
-
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 
 /* usage: 
@@ -105,9 +114,9 @@ log_highlight(FILE * outf, const int turn_highlight_on)
     return;
 
   if (turn_highlight_on)
-    fprintf(outf, "%c[1;32m", 27);	// green
+    fprintf(outf, ANSI_COLOR_GREEN);
   else
-    fprintf(outf, "%c[0m", 27);	// white
+    fprintf(outf, ANSI_COLOR_RESET);
 }
 
 
@@ -125,7 +134,7 @@ cb_log_message_complete(http_parser * parser)
   // Build log message
   if (0 == parser->type)
     {
-      snprintf(str, BUFFER_MAX, "[req] %s %s HTTP/%d.%d",
+      snprintf(str, STRING_MAX, "[req] %s %s HTTP/%d.%d",
 	       http_method_str(parser->method),
 	       ((log_data->url == NULL
 		 || !log_data->url[0]) ? "unknown" : log_data->url),
@@ -133,7 +142,7 @@ cb_log_message_complete(http_parser * parser)
     }
   else
     {
-      snprintf(str, BUFFER_MAX, "[res] HTTP/%d.%d %d %s",
+      snprintf(str, STRING_MAX, "[res] HTTP/%d.%d %d %s",
 	       parser->http_major,
 	       parser->http_minor,
 	       parser->status_code,
@@ -175,7 +184,7 @@ int
 cb_log_url(http_parser * parser, const char *at, size_t length)
 {
   struct Log_Data *log_data = (struct Log_Data *) parser->data;
-  size_t copylen = (length < BUFFER_MAX ? length : BUFFER_MAX);
+  size_t copylen = (length < URL_MAX ? length : URL_MAX);
   strncpy(log_data->url, at, copylen);
   log_data->url[copylen] = '\0';
   return 0;

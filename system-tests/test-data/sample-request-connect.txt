@@ -1,0 +1,5 @@
+CONNECT clients6.google.com:443 HTTP/1.1
+Host: clients6.google.com
+Proxy-Connection: keep-alive
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.61 Safari/537.36
+

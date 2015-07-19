@@ -14,7 +14,9 @@
  *
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -560,7 +562,7 @@ pipe_http_messages(int fd_in, int fd_out, const char *pipe_cmd,
 	      ulog_debug("Parsed %zd bytes out of %zd bytes remaining",
 			 last_parsed, bytes_read);
 
-	      if (parser->upgrade) // TODO: support this properly
+	      if (parser.upgrade) // TODO: support this properly
 		{
 		  ulog(LOG_ERR, "HTTP Upgrade protocol invoked -- feature not supported");
 		  errors++;
