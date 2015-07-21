@@ -3,6 +3,9 @@
 # prepare-travis-ci: Make a fresh repo buildable in CI
 #
 
+echo "Installing missing automake utilities..."
+automake --add-missing
+
 if [ "x$TRAVIS" = "xtrue" ] ; then
     echo "Checking versions..."
     autoconf --version | head -1

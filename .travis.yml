@@ -1,8 +1,14 @@
 language: c
 
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - check
+    - libcurl3
+
 before_script:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq check
   - ./build-aux/prepare-build-env
 
 compiler:
@@ -10,4 +16,4 @@ compiler:
   - clang
 
 notifications:
-  email: false
+  email: true
