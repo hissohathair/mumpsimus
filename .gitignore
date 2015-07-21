@@ -1,6 +1,3 @@
-# WIP
-README_NEW.md
-
 # Object files
 *.o
 
@@ -26,7 +23,6 @@ README_NEW.md
 /src/dup
 /src/body
 /src/headers
-/src/headers.OLD.c
 /unit-tests/check_stream_buffer
 /unit-tests/check_util
 /unit-tests/check_pipes
@@ -36,6 +32,7 @@ README_NEW.md
 Makefile~
 .*.swp
 .#*
+#*#
 /scratch
 
 # Autotools
@@ -66,6 +63,12 @@ app.info
 coverage_report
 *.log
 *.trs
+/build-aux/depcomp
+/build-aux/install-sh
+/build-aux/missing
+/build-aux/tap-driver.pl
+/build-aux/tap-driver.sh
+/build-aux/test-driver
 
 # Perl build
 _build
