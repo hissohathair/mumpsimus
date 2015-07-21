@@ -23,6 +23,7 @@
 /src/dup
 /src/body
 /src/headers
+/src/connect
 /unit-tests/check_stream_buffer
 /unit-tests/check_util
 /unit-tests/check_pipes
