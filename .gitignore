@@ -69,6 +69,7 @@ coverage_report
 /build-aux/tap-driver.pl
 /build-aux/tap-driver.sh
 /build-aux/test-driver
+/build-aux/compile
 
 # Perl build
 _build
