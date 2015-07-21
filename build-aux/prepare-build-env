@@ -6,7 +6,7 @@
 if [ "x$1" = "xbootstrap" ] ; then
     shift
     echo "Bootstrap -- installing GNU tool chain"
-    sudo apt-get install automake autoconf
+    sudo apt-get install automake autoconf check
 
     echo "Installing missing automake utilities..."
     ./build-aux/autogen.sh "$@"
