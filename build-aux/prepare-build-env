@@ -39,4 +39,3 @@ else
     ./build-aux/autogen.sh "$@"
 fi
 
-echo "Ready. Run make now."
