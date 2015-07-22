@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.68])
-AC_INIT([mumpsimus], [0.2], [hisso@cpan.org])
+AC_PREREQ([2.69])
+AC_INIT([mumpsimus],[0.2],[hisso@cpan.org])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/noop.c])
@@ -20,10 +20,9 @@ AX_CFLAGS_WARN_ALL
 AC_PROG_LN_S
 
 # Check for packages
-AM_PATH_CHECK([0.9.4], [have_check="yes"], 
-	       AC_MSG_WARN([Check not present. No unit tests will be run.])
-	       [have_check="no"])
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], [have_check="yes"], [have_check="no"])
 AM_CONDITIONAL([HAVE_CHECK], [test x$have_check = "xyes"])
+
 #LIBCURL_CHECK_CONFIG([yes], [7.37.1])
 
 # Checks for header files. 
@@ -32,7 +31,9 @@ AC_CHECK_HEADERS([sys/syslimits.h])
 AC_CHECK_HEADERS([linux/limits.h])
 
 # Checks for libraries.
-#AC_SEARCH_LIBS([ceil], [m])
+#AC_SEARCH_LIBS([floor], [m])
+#AC_SEARCH_LIBS([timer_create], [rt])
+#AC_SEARCH_LIBS([pthread_create], [pthread])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SSIZE_T

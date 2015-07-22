@@ -3,30 +3,36 @@
 # prepare-travis-ci: Make a fresh repo buildable in CI
 #
 
+if [ -d ./build-aux ] ; then
+    : ;
+else
+    echo "$0: I expect to be run in project root"
+    exit 255
+fi
+
 if [ "x$1" = "xbootstrap" ] ; then
     shift
     echo "Bootstrap -- installing GNU tool chain"
     sudo apt-get install automake autoconf check
+fi
 
-    echo "Installing missing automake utilities..."
-    ./build-aux/autogen.sh "$@"
-
-elif [ "x$TRAVIS" = "xtrue" ] ; then
+if [ "x$TRAVIS" = "xtrue" ] ; then
     echo "Checking versions..."
     autoconf --version | head -1
     automake --version | head -1
 
-    echo "Running autoreconf to generate required build files"
+    echo "Setting up GNU autotools..."
     export CFLAGS="$CFLAGS -DDEBUG"
-    autoreconf -fi
+    ./build-aux/autogen.sh "$@"
 
 elif [ -f config.status ] ; then
     echo "Not running under CI. Will run but not force autoreconf."
-    autoreconf -vim
+    autoreconf -vi
+    ./configure "$@"
 
-else
-    echo "Config.status is missing. Generating configure."
-    autoconf 
+elif [ -f configure ] ; then
+    echo "Running configure..."
+    ./configure "$@"
 fi
 
-echo "Ready. Run: ./configure && make"
+echo "Ready. Run make now."

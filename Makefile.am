@@ -15,3 +15,5 @@ exp/perl/App-TTT.tar.gz:
 	(cd exp/perl && perl Build.PL && ./Build dist distversion=$(VERSION))
 	cp exp/perl/App-TTT-$(VERSION).tar.gz exp/perl/App-TTT.tar.gz
 
+realclean: clean
+	 rm -rf Makefile Makefile.in aclocal.m4 autom4te.cache build-aux/compile build-aux/depcomp build-aux/install-sh build-aux/missing build-aux/tap-driver.sh build-aux/test-driver config.log config.status configure src/.deps src/.dirstamp src/Makefile src/Makefile.in src/config.h src/config.h.in src/stamp-h1 system-tests/Makefile system-tests/Makefile.in system-tests/*.log system-tests/*.trs unit-tests/\$\(* unit-tests/.deps/ unit-tests/Makefile unit-tests/Makefile.in unit-tests/*.log unit-tests/*.trs
