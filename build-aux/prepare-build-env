@@ -33,6 +33,10 @@ elif [ -f config.status ] ; then
 elif [ -f configure ] ; then
     echo "Running configure..."
     ./configure "$@"
+
+else
+    echo "Setting up GNU autotools..."
+    ./build-aux/autogen.sh "$@"
 fi
 
 echo "Ready. Run make now."

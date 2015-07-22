@@ -48,6 +48,7 @@ Makefile.in
 /config.h
 /aclocal.m4
 /config/
+/src/.dirstamp
 /src/config.h.in
 /src/config.h
 #/build*/
